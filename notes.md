@@ -41,3 +41,4 @@ The application performs the request and returns the response to the browser ext
 * https://github.com/Jikstra/torshare (using libtor to download/share files)
 * https://github.com/tauri-apps/tauri (for a potential UI?)
 * https://github.com/mrmekon/connectr (inspiation for a tab icon application)
+* https://github.com/delta1/libtor-rs-example (libtor example)
