@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-#libtor = "46.6.1+0.4.6.6"
+libtor = "46.6.1"
 serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.73"
 chrome_native_messaging = "0.2.0"
