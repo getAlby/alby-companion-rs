@@ -9,6 +9,7 @@ dependencies = [
  "chrome_native_messaging",
  "chrono",
  "libtor",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
