@@ -31,6 +31,7 @@ fn main() {
     write_debug(format!("Starting Tor"));
     Tor::new()
         .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
+        .flag(TorFlag::ControlPort(0))
         .flag(TorFlag::SocksPort(19050))
         .start_background();
 
