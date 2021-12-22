@@ -1,6 +1,6 @@
 # Setup
 ## MacOS
-You'll need [Homebrew](https://brew.sh/)  
+You'll need [Homebrew](https://brew.sh/) and [installed Rust](https://rustup.rs/).
   
 1. OpenSSL
 ```
@@ -18,13 +18,27 @@ echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"' >> ~/.zshrc
 ```
 After that restart your terminal.
 
-
-
-### Install companion app
+# Install companion app
 
 https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
 
-Edit `manifest-firefox.json`
-Copy `manifest-firefox.json` to `~/Library/Application Support/Mozilla/NativeMessagingHosts/<name>.json`
+* Edit `manifest-firefox.json`  
+* Copy `manifest-firefox.json` to `~/Library/Application Support/Mozilla/NativeMessagingHosts/<name>.json`
 
-    $ cp manifest-firefox.json ~/Library/Application Support/Mozilla/NativeMessagingHosts/alby.json
+    $ cp manifest-firefox.json "~/Library/Application Support/Mozilla/NativeMessagingHosts/alby.json"
+
+If there's no such folder:  
+```
+mkdir -p "~/Library/Application Support/Mozilla/NativeMessagingHosts/"
+```
+# Build
+In the project folder, run:  
+```
+cargo build --release
+```
+after this you'll get an executable in `./target/release/alby`
+
+# Debug
+```
+cargo run
+```

@@ -1,7 +1,7 @@
 {
 	"name": "alby",
 	"description": "Alby native messaging to connect to nodes behind Tor",
-	"path": "/TODO/GENERATE/PATH/TO/EXECUTABLE/alby-companion-rs/alby",
+	"path": "./target/release/alby",
 	"type": "stdio",
 	"allowed_extensions": [ "extension@getalby.com" ]
 }
