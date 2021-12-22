@@ -1,5 +1,6 @@
 extern crate chrono;
 
+// use std::{thread, time};
 use std::borrow::Borrow;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -9,7 +10,7 @@ use chrome_native_messaging::event_loop;
 use chrono::DateTime;
 use chrono::offset::Utc;
 use libtor::{Tor, TorFlag};
-use rand::{Rng, thread_rng};
+use rand::{random, Rng, thread_rng};
 use serde::Serialize;
 use serde_json::Value as SerdeValue;
 
@@ -28,7 +29,11 @@ fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     Ok(ResMessage { payload: response })
 }
 
-thread_local!(static TOR_PORT: u16 = get_random_port());
+thread_local!(
+    static TOR_PORT: u16 = get_random_port();
+    static TOR_USERNAME: String = get_random_string();
+    static TOR_PASSWORD: String = get_random_string();
+);
 
 fn main() {
     println!("🚧 Debug log: /tmp/alby-rs.log");
@@ -37,15 +42,24 @@ fn main() {
     Tor::new()
         .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
         .flag(TorFlag::ControlPort(0))
+        .flag(TorFlag::Socks5ProxyUsername(get_tor_username()))
+        .flag(TorFlag::Socks5ProxyPassword(get_tor_password()))
         .flag(TorFlag::SocksPort(get_tor_port()))
         .start_background();
 
-    write_debug(format!("Waiting for messages"));
+    write_debug("Waiting for messages".to_string());
+
+    // thread::sleep(time::Duration::from_secs(10));
+    // match get_response(SerdeValue::from("")) {
+    //     Ok(_) => (),
+    //     Err(e) => eprintln!("e: {:?}", e)
+    // }
     event_loop(handler);
 }
 
 fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
-    let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?;
+    let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?
+        .basic_auth(&get_tor_username(), &get_tor_password());
     let client = reqwest::blocking::Client::builder().proxy(proxy).build()?;
 
     // This code is needed just to "use" a `value` variable
@@ -55,8 +69,9 @@ fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
         true => "https://wqskhzt3oiz76dgqbqh27j3qw5aeaui3jxyexzuwxqa5czzo24i3z3ad.onion:8080"
     };
     let res = client.get(url).send()?;
+    let status = res.status();
     let body = res.text()?;
-    write_debug(format!("onion server response {:?}", &body));
+    write_debug(format!("onion server response status: {}, length: {}", status, &body.len()));
     Ok(body)
 }
 
@@ -85,6 +100,24 @@ fn get_random_port() -> u16 {
     rng.gen_range(19050..29051)
 }
 
+fn get_random_string() -> String {
+    (0..10).map(|_| random::<char>()).collect()
+}
+
 fn get_tor_port() -> u16 {
-    TOR_PORT.with(|tor_port| tor_port.borrow().clone())
+    TOR_PORT.with(|tor_port| *tor_port.borrow())
+}
+
+fn get_tor_username() -> String {
+    TOR_USERNAME.with(|v| {
+        let s: &str = v.borrow();
+        s.to_string()
+    })
+}
+
+fn get_tor_password() -> String {
+    TOR_PASSWORD.with(|v| {
+        let s: &str = v.borrow();
+        s.to_string()
+    })
 }
