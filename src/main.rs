@@ -4,12 +4,13 @@ extern crate chrono;
 use std::borrow::Borrow;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::thread;
 use std::time::SystemTime;
 
 use chrome_native_messaging::event_loop;
 use chrono::DateTime;
 use chrono::offset::Utc;
-use libtor::{Tor, TorFlag};
+use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{random, Rng, thread_rng};
 use serde::Serialize;
 use serde_json::Value as SerdeValue;
@@ -36,16 +37,9 @@ thread_local!(
 );
 
 fn main() {
-    println!("🚧 Debug log: /tmp/alby-rs.log");
-    write_debug(format!("Starting Tor on {}", get_tor_port()));
+    eprintln!("🚧 Debug log: /tmp/alby-rs.log");
 
-    Tor::new()
-        .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
-        .flag(TorFlag::ControlPort(0))
-        .flag(TorFlag::Socks5ProxyUsername(get_tor_username()))
-        .flag(TorFlag::Socks5ProxyPassword(get_tor_password()))
-        .flag(TorFlag::SocksPort(get_tor_port()))
-        .start_background();
+    launch_tor();
 
     write_debug("Waiting for messages".to_string());
 
@@ -55,6 +49,27 @@ fn main() {
     //     Err(e) => eprintln!("e: {:?}", e)
     // }
     event_loop(handler);
+}
+
+fn launch_tor() {
+    let port = get_tor_port();
+    let username = get_tor_username();
+    let password = get_tor_password();
+    write_debug(format!("Starting Tor on {}", port));
+
+    thread::spawn(move || {
+        let tor_thread = Tor::new()
+            .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
+            .flag(TorFlag::ControlPort(0))
+            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::Stderr))
+            .flag(TorFlag::Quiet())
+            .flag(TorFlag::Socks5ProxyUsername(username))
+            .flag(TorFlag::Socks5ProxyPassword(password))
+            .flag(TorFlag::SocksPort(port))
+            .start_background();
+        let _ = tor_thread.join().expect("Tor thread has panicked");
+        eprintln!("Tor thread was terminated");
+    });
 }
 
 fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
@@ -76,7 +91,7 @@ fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
 }
 
 fn write_debug(msg: String) {
-    println!("🐝 {}", &msg);
+    eprintln!("🐝 {}", &msg);
 
     let mut file = match OpenOptions::new().append(true).open("/tmp/alby-rs.log") {
         Ok(f) => f,
