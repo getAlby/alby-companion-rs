@@ -1,9 +1,9 @@
 extern crate chrono;
 
+use std::{fs, thread};
 use std::borrow::Borrow;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use std::thread;
 use std::time::SystemTime;
 
 use chrome_native_messaging::event_loop;
@@ -13,6 +13,8 @@ use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{random, Rng, thread_rng};
 use serde::Serialize;
 use serde_json::Value as SerdeValue;
+use signal_hook::consts::TERM_SIGNALS;
+use signal_hook::iterator::Signals;
 
 #[cfg(test)]
 mod test;
@@ -40,7 +42,9 @@ thread_local!(
 );
 
 fn main() {
+    listen_for_sigterm();
     launch_tor();
+    prepare_log_file();
     write_debug("Waiting for messages".to_string());
     event_loop(handler);
 }
@@ -82,6 +86,13 @@ fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
     let body = res.text()?;
     write_debug(format!("onion server response status: {}, length: {}", status, &body.len()));
     Ok(body)
+}
+
+fn prepare_log_file() {
+    match fs::remove_file(get_logfile_path()) {
+        Ok(_) => (),
+        Err(e) => eprintln!("can't prepare a log file {}: {:?}", get_logfile_path(), e)
+    }
 }
 
 fn write_debug(msg: String) {
@@ -134,4 +145,18 @@ fn get_logfile_path() -> String {
         let s: &str = v.borrow();
         s.to_string()
     })
+}
+
+fn listen_for_sigterm() {
+    match Signals::new(TERM_SIGNALS) {
+        Ok(mut signals) => {
+            thread::spawn(move || {
+                for _ in signals.forever() {
+                    write_debug("SIGTERM received".to_string());
+                    std::process::exit(0);
+                }
+            });
+        },
+        Err(e) => write_debug(format!("Can not start signals listener: {:?}", e))
+    }
 }
