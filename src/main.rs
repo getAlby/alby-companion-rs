@@ -34,20 +34,12 @@ thread_local!(
     static TOR_PORT: u16 = get_random_port();
     static TOR_USERNAME: String = get_random_string();
     static TOR_PASSWORD: String = get_random_string();
+    static LOG_FILE: String = String::from("/tmp/alby-rs.log")
 );
 
 fn main() {
-    eprintln!("🚧 Debug log: /tmp/alby-rs.log");
-
     launch_tor();
-
     write_debug("Waiting for messages".to_string());
-
-    // thread::sleep(time::Duration::from_secs(10));
-    // match get_response(SerdeValue::from("")) {
-    //     Ok(_) => (),
-    //     Err(e) => eprintln!("e: {:?}", e)
-    // }
     event_loop(handler);
 }
 
@@ -61,14 +53,14 @@ fn launch_tor() {
         let tor_thread = Tor::new()
             .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
             .flag(TorFlag::ControlPort(0))
-            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::Stderr))
+            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::File(get_logfile_path())))
             .flag(TorFlag::Quiet())
             .flag(TorFlag::Socks5ProxyUsername(username))
             .flag(TorFlag::Socks5ProxyPassword(password))
             .flag(TorFlag::SocksPort(port))
             .start_background();
         let _ = tor_thread.join().expect("Tor thread has panicked");
-        eprintln!("Tor thread was terminated");
+        write_debug("Tor thread was terminated".to_string());
     });
 }
 
@@ -91,14 +83,12 @@ fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
 }
 
 fn write_debug(msg: String) {
-    eprintln!("🐝 {}", &msg);
-
-    let mut file = match OpenOptions::new().append(true).open("/tmp/alby-rs.log") {
+    let mut file = match OpenOptions::new().append(true).open(get_logfile_path()) {
         Ok(f) => f,
-        Err(_) => match OpenOptions::new().create(true).append(true).open("/tmp/alby-rs.log") {
+        Err(_) => match OpenOptions::new().create(true).append(true).open(get_logfile_path()) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("can't create a log file: {:?}", e);
+                eprintln!("can't create a log file {}: {:?}", get_logfile_path(), e);
                 return;
             }
         }
@@ -132,6 +122,13 @@ fn get_tor_username() -> String {
 
 fn get_tor_password() -> String {
     TOR_PASSWORD.with(|v| {
+        let s: &str = v.borrow();
+        s.to_string()
+    })
+}
+
+fn get_logfile_path() -> String {
+    LOG_FILE.with(|v| {
         let s: &str = v.borrow();
         s.to_string()
     })
