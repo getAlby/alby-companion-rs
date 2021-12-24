@@ -1,6 +1,5 @@
 extern crate chrono;
 
-// use std::{thread, time};
 use std::borrow::Borrow;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -14,6 +13,9 @@ use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{random, Rng, thread_rng};
 use serde::Serialize;
 use serde_json::Value as SerdeValue;
+
+#[cfg(test)]
+mod test;
 
 #[derive(Serialize)]
 struct ResMessage {
@@ -67,7 +69,7 @@ fn launch_tor() {
 fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
     let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?
         .basic_auth(&get_tor_username(), &get_tor_password());
-    let client = reqwest::blocking::Client::builder().proxy(proxy).build()?;
+    let client = reqwest::blocking::Client::builder().danger_accept_invalid_certs(true).proxy(proxy).build()?;
 
     // This code is needed just to "use" a `value` variable
     // we should analyze the message here and define the URL and params, by the message data
