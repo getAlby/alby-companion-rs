@@ -2,6 +2,8 @@ extern crate chrono;
 
 use std::{fs, thread};
 use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::time::SystemTime;
@@ -11,7 +13,8 @@ use chrono::DateTime;
 use chrono::offset::Utc;
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{random, Rng, thread_rng};
-use serde::Serialize;
+use reqwest::header::HeaderMap;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as SerdeValue;
 use signal_hook::consts::TERM_SIGNALS;
 use signal_hook::iterator::Signals;
@@ -19,19 +22,49 @@ use signal_hook::iterator::Signals;
 #[cfg(test)]
 mod test;
 
-#[derive(Serialize)]
+#[derive(Deserialize, Debug)]
+struct ReqMessage {
+    id: String,
+    url: String,
+    method: String,
+    body: Option<String>,
+    params: Option<HashMap<String, String>>,
+    headers: Option<HashMap<String, String>>,
+}
+
+#[derive(Serialize, Debug)]
 struct ResMessage {
-    payload: String
+    id: String,
+    status: u16,
+    body: String,
+    headers: HashMap<String, String>,
+}
+
+impl Default for ReqMessage {
+    fn default() -> ReqMessage {
+        ReqMessage {
+            id: String::new(),
+            url: String::new(),
+            method: String::from("GET"),
+            body: None,
+            params: None,
+            headers: None,
+        }
+    }
 }
 
 fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     write_debug(format!("Incoming message: {:?}", &v));
-    let response = match get_response(v) {
+    let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
+        Ok(m) => m,
+        Err(err) => return Err(format!("Can not parse message: {:?}", err))
+    };
+    let response = match get_response(msg) {
         Ok(res) => res,
-        Err(err) => format!("Error: {:?}", err)
+        Err(err) => return Err(format!("Can not get response from resource: {:?}", err))
     };
     write_debug(format!("Outgoing message: {:?}", &response));
-    Ok(ResMessage { payload: response })
+    Ok(response)
 }
 
 thread_local!(
@@ -70,22 +103,67 @@ fn launch_tor() {
     });
 }
 
-fn get_response(message: SerdeValue) -> Result<String, reqwest::Error> {
+#[derive(Debug)]
+pub enum ReqError {
+    ClientError(reqwest::Error),
+    Message(String),
+}
+
+impl From<reqwest::Error> for ReqError {
+    fn from(err: reqwest::Error) -> Self {
+        ReqError::ClientError(err)
+    }
+}
+
+fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
     let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?
         .basic_auth(&get_tor_username(), &get_tor_password());
     let client = reqwest::blocking::Client::builder().danger_accept_invalid_certs(true).proxy(proxy).build()?;
-
-    // This code is needed just to "use" a `value` variable
-    // we should analyze the message here and define the URL and params, by the message data
-    let url = match message.is_boolean() {
-        false => "https://facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion",
-        true => "https://wqskhzt3oiz76dgqbqh27j3qw5aeaui3jxyexzuwxqa5czzo24i3z3ad.onion:8080"
+    let method = match message.method.as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
+        "DELETE" => reqwest::Method::DELETE,
+        _ => reqwest::Method::OPTIONS,
     };
-    let res = client.get(url).send()?;
+
+    let headers: HeaderMap = match message.headers {
+        Some(map) => match HeaderMap::try_from(&map) {
+            Ok(h) => h,
+            Err(_) => {
+                write_debug("headers were not parsed".to_string());
+                HeaderMap::new()
+            }
+        },
+        None => HeaderMap::new(),
+    };
+
+    let mut url = match reqwest::Url::parse(&message.url) {
+        Ok(u) => u,
+        Err(err) => return Err(ReqError::Message(format!("Can not parse URL: {}", err)))
+    };
+    if let Some(params_map) = message.params {
+        let mut pairs = url.query_pairs_mut();
+        for (param, value) in params_map.into_iter() {
+            pairs.append_pair(&param, &value);
+        }
+    }
+
+    let res = client.request(method, url).headers(headers).body(message.body.unwrap_or_default()).send()?;
     let status = res.status();
+    let mut res_headers: HashMap<String, String> = HashMap::new();
+    for (header_name, header_value) in res.headers().into_iter() {
+        res_headers.insert(header_name.to_string(), header_value.to_str().unwrap_or("[can not be converted into string]").to_string());
+    }
     let body = res.text()?;
-    write_debug(format!("onion server response status: {}, length: {}", status, &body.len()));
-    Ok(body)
+    write_debug(format!("onion server response status: {}, length: {}", &status, &body.len()));
+
+    Ok(ResMessage {
+        id: message.id,
+        status: status.into(),
+        body,
+        headers: res_headers
+    })
 }
 
 fn prepare_log_file() {

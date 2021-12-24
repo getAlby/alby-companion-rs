@@ -1,6 +1,6 @@
 use std::{fs, thread};
 
-use crate::SerdeValue;
+use crate::ReqMessage;
 
 #[test]
 pub fn test_tor() {
@@ -14,12 +14,26 @@ pub fn test_tor() {
         thread::sleep(std::time::Duration::from_secs(1));
     }
 
-    match crate::get_response(SerdeValue::from(true)) {
-        Ok(r) => assert!(!r.is_empty()),
+    match crate::get_response(ReqMessage {
+        id: "11".to_string(),
+        url: String::from("https://facebookwkhpilnemxj7asaniu7vnjjbiltxjqhye3mhbshg7kx5tfyd.onion"),
+        method: "GET".to_string(),
+        body: None,
+        params: None,
+        headers: None
+    }) {
+        Ok(r) => assert_eq!(r.id, String::from("11")),
         Err(e) => panic!("e: {:?}", e)
     }
-    match crate::get_response(SerdeValue::from("")) {
-        Ok(r) => assert!(!r.is_empty()),
+    match crate::get_response(ReqMessage {
+        id: "12".to_string(),
+        url: String::from("https://wqskhzt3oiz76dgqbqh27j3qw5aeaui3jxyexzuwxqa5czzo24i3z3ad.onion:8080"),
+        method: "GET".to_string(),
+        body: None,
+        params: None,
+        headers: None
+    }) {
+        Ok(r) => assert_eq!(r.id, String::from("12")),
         Err(e) => panic!("e: {:?}", e)
     }
 }
