@@ -45,11 +45,8 @@ cargo run
 
 # Command-line options
 
-## Get list of options
-
-```
-cargo run -- -h
-```
+* `--log-file`, `--log_file`, `--l`    
+* `--tor-dir`, `--tor_dir`, `--t`
 
 ## Run with option
 

@@ -12,7 +12,6 @@ use std::time::SystemTime;
 
 use chrome_native_messaging::event_loop;
 use chrono::DateTime;
-use clap::Parser as ClapParser;
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{Rng, thread_rng};
 use reqwest::header::HeaderMap;
@@ -55,19 +54,6 @@ impl Default for ReqMessage {
     }
 }
 
-/// Alby plugin companion
-#[derive(ClapParser, Debug)]
-#[clap(about, version)]
-struct Args {
-    /// Path to Tor temporary folder
-    #[clap(short, long, default_value = "/tmp/tor-rust")]
-    tor_dir: String,
-
-    /// Path to log file
-    #[clap(short, long, default_value = "/tmp/alby-rs.log")]
-    log_file: String,
-}
-
 fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     write_debug(format!("Incoming message: {:?}", &v));
     let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
@@ -91,9 +77,21 @@ thread_local!(
 );
 
 fn main() {
-    let args: Args = Args::parse();
-    LOG_FILE.with(|v| { *v.borrow_mut() = args.log_file; });
-    TOR_DIR.with(|v| { *v.borrow_mut() = args.tor_dir; });
+    let args = std::env::args();
+    for arg in args {
+        if arg.starts_with("--log_file=") || arg.starts_with("--log-file=") || arg.starts_with("-l=") {
+            let parts: Vec<&str> = arg.split('=').collect();
+            if let Some(val) = parts.get(1) {
+                LOG_FILE.with(|v| { *v.borrow_mut() = val.to_string() });
+            }
+        }
+        if arg.starts_with("--tor_dir=") || arg.starts_with("--tor-dir=") || arg.starts_with("-t=") {
+            let parts: Vec<&str> = arg.split('=').collect();
+            if let Some(val) = parts.get(1) {
+                TOR_DIR.with(|v| { *v.borrow_mut() = val.to_string() });
+            }
+        }
+    }
 
     if !create_lock_file() {
         eprintln!("Only one instance allowed!");
@@ -105,7 +103,7 @@ fn main() {
     launch_tor();
     write_debug("Waiting for messages".to_string());
     event_loop(handler);
-    remove_lock_file();
+    remove_lock_file(get_lock_file_path());
 }
 
 pub fn launch_tor() {
@@ -114,25 +112,26 @@ pub fn launch_tor() {
     let password = get_tor_password();
     let log_file = get_logfile_path();
     let tor_dir = get_tor_dir_path();
+    let lock_file = get_lock_file_path();
     write_debug(format!("Starting Tor on port {}, user: {}, in folder {}. Log redirected to {}", port, username, &tor_dir, &log_file));
 
     thread::spawn(move || {
         let tor_thread = Tor::new()
             .flag(TorFlag::DataDirectory(tor_dir))
             .flag(TorFlag::ControlPort(0))
-            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::File(log_file)))
+            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::File(log_file.clone())))
             .flag(TorFlag::Quiet())
             .flag(TorFlag::Socks5ProxyUsername(username))
             .flag(TorFlag::Socks5ProxyPassword(password))
             .flag(TorFlag::SocksPort(port))
             .start_background();
-        if wait_for_tor(20) {
+        if wait_for_tor(20, &log_file) {
             send_tor_started_msg();
         }
         match tor_thread.join() {
             Ok(r) => match r {
                 Ok(result) => {
-                    write_debug(format!("Tor thread was terminated: {}", result));
+                    write_debug_to(format!("Tor thread was terminated: {}", result), &log_file);
                     send_stdout_msg(ResMessage {
                         id: "status".to_string(),
                         status: result as u16,
@@ -142,10 +141,10 @@ pub fn launch_tor() {
                             (String::from("X-Alby-description"), String::from("Tor thread was terminated"))
                         ])
                     });
-                    exit(result as i32);
+                    exit(result as i32, lock_file);
                 },
                 Err(err) => {
-                    write_debug(format!("Can not spawn Tor thread: {:?}", err));
+                    write_debug_to(format!("Can not spawn Tor thread: {:?}", err), &log_file);
                     send_stdout_msg(ResMessage {
                         id: "status".to_string(),
                         status: 502,
@@ -155,7 +154,7 @@ pub fn launch_tor() {
                             (String::from("X-Alby-description"), String::from("Can not spawn Tor thread"))
                         ])
                     });
-                    exit(1);
+                    exit(1, lock_file);
                 }
             },
             Err(_) => write_debug(String::from("Tor thread has panicked"))
@@ -172,18 +171,8 @@ fn send_tor_started_msg() {
     });
 }
 
-#[allow(unused_results)]
 fn send_stdout_msg(msg: ResMessage) -> bool {
-    match chrome_native_messaging::send_message(std::io::stdout(), &msg) {
-        Ok(_) => {
-            write_debug(format!("Sending message: {:?}", &msg));
-            true
-        },
-        Err(e) => {
-            write_debug(format!("Can't send message [{:?}], error: {:?}", msg, e));
-            false
-        }
-    }
+    chrome_native_messaging::send_message(std::io::stdout(), &msg).is_ok()
 }
 
 #[derive(Debug)]
@@ -260,12 +249,16 @@ pub fn prepare_log_file() {
 }
 
 fn write_debug(msg: String) {
-    let mut file = match OpenOptions::new().append(true).open(get_logfile_path()) {
+    write_debug_to(msg, &get_logfile_path());
+}
+
+fn write_debug_to(msg: String, log_file: &str) {
+    let mut file = match OpenOptions::new().append(true).open(log_file) {
         Ok(f) => f,
-        Err(_) => match OpenOptions::new().create(true).append(true).open(get_logfile_path()) {
+        Err(_) => match OpenOptions::new().create(true).append(true).open(log_file) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("can't create a log file {}: {:?}", get_logfile_path(), e);
+                eprintln!("can't create a log file {}: {:?}", log_file, e);
                 return;
             }
         }
@@ -319,17 +312,18 @@ fn get_tor_dir_path() -> String {
     })
 }
 
-fn get_lock_file() -> String {
+fn get_lock_file_path() -> String {
     format!("{}.process", get_logfile_path())
 }
 
 fn listen_for_sigterm() {
+    let lock_file = get_lock_file_path();
     match Signals::new(TERM_SIGNALS) {
         Ok(mut signals) => {
             thread::spawn(move || {
                 for _ in signals.forever() {
                     write_debug("SIGTERM received".to_string());
-                    exit(0);
+                    exit(0, lock_file.clone());
                 }
             });
         },
@@ -340,7 +334,7 @@ fn listen_for_sigterm() {
 fn create_lock_file() -> bool {
     match OpenOptions::new().write(true)
         .create_new(true)
-        .open(get_lock_file()) {
+        .open(get_lock_file_path()) {
         Ok(mut file) => {
             let _ = writeln!(file, "{}\t {}", get_system_time(), std::process::id());
             true
@@ -358,18 +352,18 @@ fn get_system_time() -> String {
     dt.format("%d-%m-%Y %H:%M:%S").to_string()
 }
 
-fn remove_lock_file() {
-    let _ = fs::remove_file(get_lock_file());
+fn remove_lock_file(path: String) {
+    let _ = fs::remove_file(path);
 }
 
-fn exit(code: i32) {
-    remove_lock_file();
+fn exit(code: i32, lock_file: String) {
+    remove_lock_file(lock_file);
     std::process::exit(code);
 }
 
-pub fn wait_for_tor(seconds: u8) -> bool {
+pub fn wait_for_tor(seconds: u8, log_file: &str) -> bool {
     for _ in 0..seconds {
-        let log = get_log();
+        let log = get_log(log_file);
         if log.contains("Bootstrapped 100% (done):") {
             return true;
         }
@@ -378,8 +372,8 @@ pub fn wait_for_tor(seconds: u8) -> bool {
     false
 }
 
-pub fn get_log() -> String {
-    match fs::read_to_string(crate::get_logfile_path()) {
+pub fn get_log(path: &str) -> String {
+    match fs::read_to_string(path) {
         Ok(content) => content,
         Err(_) => String::new()
     }

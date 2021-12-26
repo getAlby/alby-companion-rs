@@ -4,7 +4,7 @@ use crate::ReqMessage;
 pub fn test_tor() {
     crate::prepare_log_file();
     crate::launch_tor();
-    let _ = crate::wait_for_tor(15);
+    let _ = crate::wait_for_tor(15, &crate::get_logfile_path());
 
     match crate::get_response(ReqMessage {
         id: "11".to_string(),
