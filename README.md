@@ -42,3 +42,25 @@ after this you'll get an executable in `./target/release/alby`
 ```
 cargo run
 ```
+
+# Command-line options
+
+## Get list of options
+
+```
+cargo run -- -h
+```
+
+## Run with option
+
+Executable:  
+
+```
+/some/folder/alby --log-file=/tmp/alby.log
+```
+
+Debug:  
+
+```
+cargo run -- --log-file=/tmp/alby.log
+```

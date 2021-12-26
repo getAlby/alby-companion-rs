@@ -1,6 +1,6 @@
 [package]
 name = "alby"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,3 +14,4 @@ reqwest = { version = "0.11", features = ["blocking", "json", "socks"] }
 chrono = "0.4"
 rand = "0.8.4"
 signal-hook = "0.3.13"
+clap = { version = "3.0.0-rc.8", features = ["derive"] }

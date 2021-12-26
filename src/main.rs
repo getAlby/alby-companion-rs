@@ -2,6 +2,7 @@ extern crate chrono;
 
 use std::{fs, thread};
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::OpenOptions;
@@ -11,8 +12,9 @@ use std::time::SystemTime;
 use chrome_native_messaging::event_loop;
 use chrono::DateTime;
 use chrono::offset::Utc;
+use clap::Parser as ClapParser;
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
-use rand::{random, Rng, thread_rng};
+use rand::{Rng, thread_rng};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as SerdeValue;
@@ -53,6 +55,19 @@ impl Default for ReqMessage {
     }
 }
 
+/// Alby plugin companion
+#[derive(ClapParser, Debug)]
+#[clap(about, version)]
+struct Args {
+    /// Path to Tor temporary folder
+    #[clap(short, long, default_value = "/tmp/tor-rust")]
+    tor_dir: String,
+
+    /// Path to log file
+    #[clap(short, long, default_value = "/tmp/alby-rs.log")]
+    log_file: String,
+}
+
 fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     write_debug(format!("Incoming message: {:?}", &v));
     let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
@@ -69,15 +84,20 @@ fn handler(v: SerdeValue) -> Result<ResMessage, String> {
 
 thread_local!(
     static TOR_PORT: u16 = get_random_port();
-    static TOR_USERNAME: String = get_random_string();
+    static TOR_USERNAME: String = format!("u{}", get_random_string());
     static TOR_PASSWORD: String = get_random_string();
-    static LOG_FILE: String = String::from("/tmp/alby-rs.log")
+    static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby-rs.log"));
+    static TOR_DIR: RefCell<String> = RefCell::new(String::from("/tmp/tor-rust"));
 );
 
 fn main() {
+    let args: Args = Args::parse();
+    LOG_FILE.with(|v| { *v.borrow_mut() = args.log_file; });
+    TOR_DIR.with(|v| { *v.borrow_mut() = args.tor_dir; });
+
+    prepare_log_file();
     listen_for_sigterm();
     launch_tor();
-    prepare_log_file();
     write_debug("Waiting for messages".to_string());
     event_loop(handler);
 }
@@ -86,13 +106,15 @@ pub fn launch_tor() {
     let port = get_tor_port();
     let username = get_tor_username();
     let password = get_tor_password();
-    write_debug(format!("Starting Tor on {}", port));
+    let log_file = get_logfile_path();
+    let tor_dir = get_tor_dir_path();
+    write_debug(format!("Starting Tor on port {}, user: {}, in folder {}. Log redirected to {}", port, username, &tor_dir, &log_file));
 
     thread::spawn(move || {
         let tor_thread = Tor::new()
-            .flag(TorFlag::DataDirectory("/tmp/tor-rust".into()))
+            .flag(TorFlag::DataDirectory(tor_dir))
             .flag(TorFlag::ControlPort(0))
-            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::File(get_logfile_path())))
+            .flag(TorFlag::LogTo(LogLevel::Notice, LogDestination::File(log_file)))
             .flag(TorFlag::Quiet())
             .flag(TorFlag::Socks5ProxyUsername(username))
             .flag(TorFlag::Socks5ProxyPassword(password))
@@ -181,9 +203,12 @@ fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
 }
 
 pub fn prepare_log_file() {
-    match fs::remove_file(get_logfile_path()) {
-        Ok(_) => (),
-        Err(e) => eprintln!("can't prepare a log file {}: {:?}", get_logfile_path(), e)
+    let path = get_logfile_path();
+    if std::path::Path::new(&path).exists() {
+        match fs::remove_file(&path) {
+            Ok(_) => (),
+            Err(e) => eprintln!("can't prepare a log file {}: {:?}", path, e)
+        }
     }
 }
 
@@ -211,7 +236,12 @@ fn get_random_port() -> u16 {
 }
 
 fn get_random_string() -> String {
-    (0..10).map(|_| random::<char>()).collect()
+    let mut rng = thread_rng();
+    std::iter::repeat(())
+        .map(|()| rng.sample(rand::distributions::Alphanumeric))
+        .map(char::from)
+        .take(10)
+        .collect()
 }
 
 fn get_tor_port() -> u16 {
@@ -234,8 +264,13 @@ fn get_tor_password() -> String {
 
 fn get_logfile_path() -> String {
     LOG_FILE.with(|v| {
-        let s: &str = v.borrow();
-        s.to_string()
+        (*(v.borrow())).clone()
+    })
+}
+
+fn get_tor_dir_path() -> String {
+    TOR_DIR.with(|v| {
+        (*(v.borrow())).clone()
     })
 }
 
