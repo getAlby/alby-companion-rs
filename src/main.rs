@@ -11,7 +11,6 @@ use std::time::SystemTime;
 
 use chrome_native_messaging::event_loop;
 use chrono::DateTime;
-use chrono::offset::Utc;
 use clap::Parser as ClapParser;
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 use rand::{Rng, thread_rng};
@@ -123,19 +122,60 @@ pub fn launch_tor() {
         if wait_for_tor(20) {
             send_tor_started_msg();
         }
-        let _ = tor_thread.join().expect("Tor thread has panicked");
-        write_debug("Tor thread was terminated".to_string());
+        match tor_thread.join() {
+            Ok(r) => match r {
+                Ok(result) => {
+                    write_debug(format!("Tor thread was terminated: {}", result));
+                    send_stdout_msg(ResMessage {
+                        id: "status".to_string(),
+                        status: result as u16,
+                        body: "terminate".to_string(),
+                        headers: HashMap::from([
+                            (String::from("X-Alby-internal"), String::from("true")),
+                            (String::from("X-Alby-description"), String::from("Tor thread was terminated"))
+                        ])
+                    });
+                    std::process::exit(result as i32);
+                },
+                Err(err) => {
+                    write_debug(format!("Can not spawn Tor thread: {:?}", err));
+                    send_stdout_msg(ResMessage {
+                        id: "status".to_string(),
+                        status: 502,
+                        body: "error".to_string(),
+                        headers: HashMap::from([
+                            (String::from("X-Alby-internal"), String::from("true")),
+                            (String::from("X-Alby-description"), String::from("Can not spawn Tor thread"))
+                        ])
+                    });
+                    std::process::exit(1);
+                }
+            },
+            Err(_) => write_debug(String::from("Tor thread has panicked"))
+        }
     });
 }
 
 fn send_tor_started_msg() {
-    if let Err(e) = chrome_native_messaging::send_message(std::io::stdout(), &ResMessage {
+    send_stdout_msg(ResMessage {
         id: "status".to_string(),
         status: 100,
         body: "tor_started".to_string(),
         headers: HashMap::from([("X-Alby-Internal".to_string(), "true".to_string())])
-    }) {
-        write_debug(format!("Can't send tor_started message: {:?}", e));
+    });
+}
+
+#[allow(unused_results)]
+fn send_stdout_msg(msg: ResMessage) -> bool {
+    match chrome_native_messaging::send_message(std::io::stdout(), &msg) {
+        Ok(_) => {
+            write_debug(format!("Sending message: {:?}", &msg));
+            true
+        },
+        Err(e) => {
+            write_debug(format!("Can't send message [{:?}], error: {:?}", msg, e));
+            false
+        }
     }
 }
 
@@ -224,8 +264,8 @@ fn write_debug(msg: String) {
         }
     };
     let system_time = SystemTime::now();
-    let utc: DateTime<Utc> = system_time.into();
-    if let Err(e) = writeln!(file, "{}\t {}", utc.format("%d-%m-%Y %H:%M:%S"), msg) {
+    let dt: DateTime<chrono::Local> = system_time.into();
+    if let Err(e) = writeln!(file, "{}\t {}", dt.format("%d-%m-%Y %H:%M:%S"), msg) {
         eprintln!("Couldn't write to file: {}", e);
     }
 }
