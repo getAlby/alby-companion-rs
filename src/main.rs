@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::path::Path;
 use std::time::SystemTime;
 
 use chrome_native_messaging::event_loop;
@@ -94,11 +95,17 @@ fn main() {
     LOG_FILE.with(|v| { *v.borrow_mut() = args.log_file; });
     TOR_DIR.with(|v| { *v.borrow_mut() = args.tor_dir; });
 
+    if !create_lock_file() {
+        eprintln!("Only one instance allowed!");
+        std::process::exit(1);
+    }
+
     prepare_log_file();
     listen_for_sigterm();
     launch_tor();
     write_debug("Waiting for messages".to_string());
     event_loop(handler);
+    remove_lock_file();
 }
 
 pub fn launch_tor() {
@@ -135,7 +142,7 @@ pub fn launch_tor() {
                             (String::from("X-Alby-description"), String::from("Tor thread was terminated"))
                         ])
                     });
-                    std::process::exit(result as i32);
+                    exit(result as i32);
                 },
                 Err(err) => {
                     write_debug(format!("Can not spawn Tor thread: {:?}", err));
@@ -148,7 +155,7 @@ pub fn launch_tor() {
                             (String::from("X-Alby-description"), String::from("Can not spawn Tor thread"))
                         ])
                     });
-                    std::process::exit(1);
+                    exit(1);
                 }
             },
             Err(_) => write_debug(String::from("Tor thread has panicked"))
@@ -244,7 +251,7 @@ fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
 
 pub fn prepare_log_file() {
     let path = get_logfile_path();
-    if std::path::Path::new(&path).exists() {
+    if Path::new(&path).exists() {
         match fs::remove_file(&path) {
             Ok(_) => (),
             Err(e) => eprintln!("can't prepare a log file {}: {:?}", path, e)
@@ -263,10 +270,8 @@ fn write_debug(msg: String) {
             }
         }
     };
-    let system_time = SystemTime::now();
-    let dt: DateTime<chrono::Local> = system_time.into();
-    if let Err(e) = writeln!(file, "{}\t {}", dt.format("%d-%m-%Y %H:%M:%S"), msg) {
-        eprintln!("Couldn't write to file: {}", e);
+    if let Err(e) = writeln!(file, "{}\t {}", get_system_time(), msg) {
+        eprintln!("Couldn't write to log file: {}", e);
     }
 }
 
@@ -314,18 +319,52 @@ fn get_tor_dir_path() -> String {
     })
 }
 
+fn get_lock_file() -> String {
+    format!("{}.process", get_logfile_path())
+}
+
 fn listen_for_sigterm() {
     match Signals::new(TERM_SIGNALS) {
         Ok(mut signals) => {
             thread::spawn(move || {
                 for _ in signals.forever() {
                     write_debug("SIGTERM received".to_string());
-                    std::process::exit(0);
+                    exit(0);
                 }
             });
         },
         Err(e) => write_debug(format!("Can not start signals listener: {:?}", e))
     }
+}
+
+fn create_lock_file() -> bool {
+    match OpenOptions::new().write(true)
+        .create_new(true)
+        .open(get_lock_file()) {
+        Ok(mut file) => {
+            let _ = writeln!(file, "{}\t {}", get_system_time(), std::process::id());
+            true
+        },
+        Err(err) => {
+            eprintln!("Can not create a lock file: {:?}", err);
+            false
+        }
+    }
+}
+
+fn get_system_time() -> String {
+    let system_time = SystemTime::now();
+    let dt: DateTime<chrono::Local> = system_time.into();
+    dt.format("%d-%m-%Y %H:%M:%S").to_string()
+}
+
+fn remove_lock_file() {
+    let _ = fs::remove_file(get_lock_file());
+}
+
+fn exit(code: i32) {
+    remove_lock_file();
+    std::process::exit(code);
 }
 
 pub fn wait_for_tor(seconds: u8) -> bool {
