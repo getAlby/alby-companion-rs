@@ -82,7 +82,7 @@ fn main() {
     event_loop(handler);
 }
 
-fn launch_tor() {
+pub fn launch_tor() {
     let port = get_tor_port();
     let username = get_tor_username();
     let password = get_tor_password();
@@ -98,9 +98,23 @@ fn launch_tor() {
             .flag(TorFlag::Socks5ProxyPassword(password))
             .flag(TorFlag::SocksPort(port))
             .start_background();
+        if wait_for_tor(20) {
+            send_tor_started_msg();
+        }
         let _ = tor_thread.join().expect("Tor thread has panicked");
         write_debug("Tor thread was terminated".to_string());
     });
+}
+
+fn send_tor_started_msg() {
+    if let Err(e) = chrome_native_messaging::send_message(std::io::stdout(), &ResMessage {
+        id: "status".to_string(),
+        status: 100,
+        body: "tor_started".to_string(),
+        headers: HashMap::from([("X-Alby-Internal".to_string(), "true".to_string())])
+    }) {
+        write_debug(format!("Can't send tor_started message: {:?}", e));
+    }
 }
 
 #[derive(Debug)]
@@ -166,7 +180,7 @@ fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
     })
 }
 
-fn prepare_log_file() {
+pub fn prepare_log_file() {
     match fs::remove_file(get_logfile_path()) {
         Ok(_) => (),
         Err(e) => eprintln!("can't prepare a log file {}: {:?}", get_logfile_path(), e)
@@ -236,5 +250,23 @@ fn listen_for_sigterm() {
             });
         },
         Err(e) => write_debug(format!("Can not start signals listener: {:?}", e))
+    }
+}
+
+pub fn wait_for_tor(seconds: u8) -> bool {
+    for _ in 0..seconds {
+        let log = get_log();
+        if log.contains("Bootstrapped 100% (done):") {
+            return true;
+        }
+        thread::sleep(std::time::Duration::from_secs(1));
+    }
+    false
+}
+
+pub fn get_log() -> String {
+    match fs::read_to_string(crate::get_logfile_path()) {
+        Ok(content) => content,
+        Err(_) => String::new()
     }
 }
