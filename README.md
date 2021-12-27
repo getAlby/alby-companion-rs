@@ -25,11 +25,11 @@ https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_me
 * Edit `manifest-firefox.json`  
 * Copy `manifest-firefox.json` to `~/Library/Application Support/Mozilla/NativeMessagingHosts/<name>.json`
 
-    $ cp manifest-firefox.json "~/Library/Application Support/Mozilla/NativeMessagingHosts/alby.json"
+    $ cp manifest-firefox.json "~/Library/Application\ Support/Mozilla/NativeMessagingHosts/alby.json"
 
 If there's no such folder:  
 ```
-mkdir -p "~/Library/Application Support/Mozilla/NativeMessagingHosts/"
+mkdir -p "~/Library/Application\ Support/Mozilla/NativeMessagingHosts/"
 ```
 # Build
 In the project folder, run:  
