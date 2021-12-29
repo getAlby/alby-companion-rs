@@ -4,9 +4,13 @@ use std::thread;
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 
 use crate::{exit, get_lock_file_path, get_log, get_logfile_path, get_tor_dir_path, get_tor_password, get_tor_port, get_tor_username, write_debug, write_debug_to};
-use crate::messages::{ResMessage, send_stdout_msg, send_tor_started_msg};
+use crate::messages::{ResMessage, send_stdout_msg};
 
 pub fn launch_tor() {
+    if crate::is_tor_started() {
+        return;
+    }
+    crate::set_tor_is_started(true); // otherwise it will be possible to launch 2 starting processes
     let port = get_tor_port();
     let username = get_tor_username();
     let password = get_tor_password();
@@ -25,9 +29,6 @@ pub fn launch_tor() {
             .flag(TorFlag::Socks5ProxyPassword(password))
             .flag(TorFlag::SocksPort(port))
             .start_background();
-        if wait_for_tor(20, &log_file) {
-            send_tor_started_msg();
-        }
         match tor_thread.join() {
             Ok(r) => match r {
                 Ok(result) => {
@@ -63,9 +64,10 @@ pub fn launch_tor() {
 }
 
 pub fn wait_for_tor(seconds: u8, log_file: &str) -> bool {
+    let pid = crate::get_pid_key();
     for _ in 0..seconds {
         let log = get_log(log_file);
-        if log.contains("Bootstrapped 100% (done):") {
+        if log.contains("Bootstrapped 100% (done):") && log.contains(&pid) {
             return true;
         }
         thread::sleep(std::time::Duration::from_secs(1));

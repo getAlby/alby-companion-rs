@@ -24,9 +24,16 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         Ok(u) => u,
         Err(err) => return Err(ReqError::Message(format!("Can not parse URL: {}", err)))
     };
+    let log_file = crate::get_logfile_path();
     let client = match url.domain() {
         Some(host) => match host.contains(".onion") {
             true => {
+                if !crate::is_tor_started() {
+                    crate::tor::launch_tor();
+                    if !crate::tor::wait_for_tor(20, &log_file) {
+                        return Ok(crate::messages::get_tor_failed_start_msg())
+                    }
+                }
                 let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?.basic_auth(&get_tor_username(), &get_tor_password());
                 reqwest::blocking::Client::builder()
                     .danger_accept_invalid_certs(true)
@@ -75,7 +82,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         res_headers.insert(header_name.to_string(), header_value.to_str().unwrap_or("[can not be converted into string]").to_string());
     }
     let body = res.text()?;
-    write_debug(format!("onion server response status: {}, length: {}", &status, &body.len()));
+    write_debug(format!("server response status: {}, length: {}", &status, &body.len()));
 
     Ok(ResMessage {
         id: message.id,

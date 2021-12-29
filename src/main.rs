@@ -20,6 +20,7 @@ mod test;
 mod messages;
 mod tor;
 mod requests;
+mod cli;
 
 thread_local!(
     static TOR_PORT: u16 = get_random_port();
@@ -27,36 +28,28 @@ thread_local!(
     static TOR_PASSWORD: String = get_random_string();
     static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby-rs.log"));
     static TOR_DIR: RefCell<String> = RefCell::new(String::from("/tmp/tor-rust"));
+    static TOR_STARTED: RefCell<bool> = RefCell::new(false);
 );
 
 fn main() {
-    let args = std::env::args();
-    for arg in args {
-        if arg.starts_with("--log_file=") || arg.starts_with("--log-file=") || arg.starts_with("-l=") {
-            let parts: Vec<&str> = arg.split('=').collect();
-            if let Some(val) = parts.get(1) {
-                LOG_FILE.with(|v| { *v.borrow_mut() = val.to_string() });
-            }
-        }
-        if arg.starts_with("--tor_dir=") || arg.starts_with("--tor-dir=") || arg.starts_with("-t=") {
-            let parts: Vec<&str> = arg.split('=').collect();
-            if let Some(val) = parts.get(1) {
-                TOR_DIR.with(|v| { *v.borrow_mut() = val.to_string() });
-            }
-        }
+    let opts = cli::get_cli_options(cli::get_args_from_cli());
+    if let Some(val) = opts.log_file {
+        LOG_FILE.with(|v| { *v.borrow_mut() = val.to_string() });
+    }
+    if let Some(val) = opts.tor_dir {
+        TOR_DIR.with(|v| { *v.borrow_mut() = val.to_string() });
     }
 
-    if !create_lock_file() {
+    let lock = create_lock_file();
+    if lock.is_none() {
         eprintln!("Only one instance allowed!");
         std::process::exit(1);
     }
 
     prepare_log_file();
     listen_for_sigterm();
-    crate::tor::launch_tor();
     write_debug("Waiting for messages".to_string());
-    event_loop(crate::messages::handler);
-    remove_lock_file(get_lock_file_path());
+    event_loop(messages::handler);
 }
 
 
@@ -64,10 +57,14 @@ pub fn prepare_log_file() {
     let path = get_logfile_path();
     if Path::new(&path).exists() {
         match fs::remove_file(&path) {
-            Ok(_) => (),
+            Ok(_) => write_debug_to(get_pid_key(), &path),
             Err(e) => eprintln!("can't prepare a log file {}: {:?}", path, e)
         }
     }
+}
+
+pub fn get_pid_key() -> String {
+    format!("process: {}", std::process::id())
 }
 
 fn write_debug(msg: String) {
@@ -153,17 +150,28 @@ fn listen_for_sigterm() {
     }
 }
 
-fn create_lock_file() -> bool {
+struct LockFile {
+    path: String,
+}
+
+impl Drop for LockFile {
+    fn drop(&mut self) {
+        remove_lock_file(self.path.to_string());
+    }
+}
+
+fn create_lock_file() -> Option<LockFile> {
+    let path = get_lock_file_path();
     match OpenOptions::new().write(true)
         .create_new(true)
-        .open(get_lock_file_path()) {
+        .open(&path) {
         Ok(mut file) => {
             let _ = writeln!(file, "{}\t {}", get_system_time(), std::process::id());
-            true
+            Some(LockFile { path })
         },
         Err(err) => {
             eprintln!("Can not create a lock file: {:?}", err);
-            false
+            None
         }
     }
 }
@@ -189,4 +197,12 @@ pub fn get_log(path: &str) -> String {
         Ok(content) => content,
         Err(_) => String::new()
     }
+}
+
+pub fn is_tor_started() -> bool {
+    TOR_STARTED.with(|v| *v.borrow())
+}
+
+pub fn set_tor_is_started(val: bool) {
+    TOR_STARTED.with(|v| *v.borrow_mut() = val)
 }
