@@ -31,7 +31,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
                 if !crate::is_tor_started() {
                     crate::tor::launch_tor();
                 }
-                if !crate::is_tor_ready() && !crate::tor::wait_for_tor(20, &log_file) {
+                if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &log_file) {
                     return Ok(crate::messages::get_tor_failed_start_msg())
                 }
                 let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?.basic_auth(&get_tor_username(), &get_tor_password());
@@ -42,9 +42,15 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
                     .build()?
             },
             false => {
-                reqwest::blocking::Client::builder()
-                    .timeout(Some(Duration::from_secs(15)))
-                    .build()?
+                let mut builder = reqwest::blocking::Client::builder()
+                    .timeout(Some(Duration::from_secs(15)));
+                if let Some(cert_str) = message.certificate {
+                    match reqwest::Certificate::from_pem(cert_str.as_bytes()) {
+                        Ok(cert) => builder = builder.add_root_certificate(cert),
+                        Err(e) => return Err(ReqError::Message(format!("Can not parse certificate: {:#?}", e)))
+                    }
+                }
+                builder.build()?
             }
         },
         None => return Err(ReqError::Message("Can not parse domain".to_string())),

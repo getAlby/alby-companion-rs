@@ -45,7 +45,7 @@ pub fn launch_tor() {
                     exit(result as i32, lock_file);
                 },
                 Err(err) => {
-                    write_debug_to(format!("Can not spawn Tor thread: {:?}", err), &log_file);
+                    write_debug_to(format!("Can not spawn Tor thread: {:#?}", err), &log_file);
                     send_stdout_msg(ResMessage {
                         id: "status".to_string(),
                         status: 502,

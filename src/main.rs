@@ -59,7 +59,7 @@ pub fn prepare_log_file() {
     if Path::new(&path).exists() {
         match fs::remove_file(&path) {
             Ok(_) => write_debug_to(get_pid_key(), &path),
-            Err(e) => eprintln!("can't prepare a log file {}: {:?}", path, e)
+            Err(e) => eprintln!("can't prepare a log file {}: {:#?}", path, e)
         }
     }
 }
@@ -78,7 +78,7 @@ fn write_debug_to(msg: String, log_file: &str) {
         Err(_) => match OpenOptions::new().create(true).append(true).open(log_file) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("can't create a log file {}: {:?}", log_file, e);
+                eprintln!("can't create a log file {}: {:#?}", log_file, e);
                 return;
             }
         }
@@ -147,7 +147,7 @@ fn listen_for_sigterm() {
                 }
             });
         },
-        Err(e) => write_debug(format!("Can not start signals listener: {:?}", e))
+        Err(e) => write_debug(format!("Can not start signals listener: {:#?}", e))
     }
 }
 
@@ -171,7 +171,7 @@ fn create_lock_file() -> Option<LockFile> {
             Some(LockFile { path })
         },
         Err(err) => {
-            eprintln!("Can not create a lock file: {:?}", err);
+            eprintln!("Can not create a lock file: {:#?}", err);
             None
         }
     }

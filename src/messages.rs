@@ -17,6 +17,7 @@ pub struct ReqMessage {
     pub params: Option<HashMap<String, String>>,
     pub headers: Option<HashMap<String, String>>,
     pub action: Option<String>,
+    pub certificate: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
@@ -37,18 +38,19 @@ impl Default for ReqMessage {
             params: None,
             headers: None,
             action: None,
+            certificate: None,
         }
     }
 }
 
 pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
-    write_debug(format!("Incoming message: {:?}", &v));
+    write_debug(format!("Incoming message: \n{:#?}", &v));
     let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
         Ok(m) => m,
-        Err(err) => return Err(format!("Can not parse message: {:?}", err))
+        Err(err) => return Err(format!("Can not parse message: \n{:#?}", err))
     };
     let response = get_response_msg(msg)?;
-    write_debug(format!("Outgoing message: {:?}", &response));
+    write_debug(format!("Outgoing message: \n{:#?}", &response));
     Ok(response)
 }
 
@@ -60,7 +62,7 @@ fn get_response_msg(msg: ReqMessage) -> Result<ResMessage, String>
                 return Ok(get_tor_started_msg());
             }
             crate::tor::launch_tor();
-            return if wait_for_tor(20, &crate::get_logfile_path()) {
+            return if wait_for_tor(15, &crate::get_logfile_path()) {
                 Ok(get_tor_started_msg())
             } else {
                 Ok(get_tor_failed_start_msg())
@@ -69,7 +71,7 @@ fn get_response_msg(msg: ReqMessage) -> Result<ResMessage, String>
     }
     match get_response(msg) {
         Ok(res) => Ok(res),
-        Err(err) => Err(format!("Can not get response from resource: {:?}", err))
+        Err(err) => Err(format!("Can not get response from resource: {:#?}", err))
     }
 }
 
