@@ -29,6 +29,7 @@ thread_local!(
     static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby-rs.log"));
     static TOR_DIR: RefCell<String> = RefCell::new(String::from("/tmp/tor-rust"));
     static TOR_STARTED: RefCell<bool> = RefCell::new(false);
+    static TOR_READY: RefCell<bool> = RefCell::new(false);
 );
 
 fn main() {
@@ -205,4 +206,12 @@ pub fn is_tor_started() -> bool {
 
 pub fn set_tor_is_started(val: bool) {
     TOR_STARTED.with(|v| *v.borrow_mut() = val)
+}
+
+pub fn is_tor_ready() -> bool {
+    TOR_READY.with(|v| *v.borrow())
+}
+
+pub fn set_tor_is_ready(val: bool) {
+    TOR_READY.with(|v| *v.borrow_mut() = val)
 }

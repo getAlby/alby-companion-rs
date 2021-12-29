@@ -68,6 +68,7 @@ pub fn wait_for_tor(seconds: u8, log_file: &str) -> bool {
     for _ in 0..seconds {
         let log = get_log(log_file);
         if log.contains("Bootstrapped 100% (done):") && log.contains(&pid) {
+            crate::set_tor_is_ready(true);
             return true;
         }
         thread::sleep(std::time::Duration::from_secs(1));

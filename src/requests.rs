@@ -30,9 +30,9 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
             true => {
                 if !crate::is_tor_started() {
                     crate::tor::launch_tor();
-                    if !crate::tor::wait_for_tor(20, &log_file) {
-                        return Ok(crate::messages::get_tor_failed_start_msg())
-                    }
+                }
+                if !crate::is_tor_ready() && !crate::tor::wait_for_tor(20, &log_file) {
+                    return Ok(crate::messages::get_tor_failed_start_msg())
                 }
                 let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?.basic_auth(&get_tor_username(), &get_tor_password());
                 reqwest::blocking::Client::builder()

@@ -1,6 +1,8 @@
+use serial_test::serial;
 use crate::messages::ReqMessage;
 
 #[test]
+#[serial]
 pub fn test_clearnet_request() {
     crate::prepare_log_file();
     match crate::requests::get_response(ReqMessage {
@@ -18,6 +20,7 @@ pub fn test_clearnet_request() {
 }
 
 #[test]
+#[serial]
 pub fn test_tor_request() {
     crate::prepare_log_file();
 

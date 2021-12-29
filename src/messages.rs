@@ -47,6 +47,13 @@ pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
         Ok(m) => m,
         Err(err) => return Err(format!("Can not parse message: {:?}", err))
     };
+    let response = get_response_msg(msg)?;
+    write_debug(format!("Outgoing message: {:?}", &response));
+    Ok(response)
+}
+
+fn get_response_msg(msg: ReqMessage) -> Result<ResMessage, String>
+{
     if let Some(action) = &msg.action {
         if action == "startTor" {
             if crate::is_tor_started() {
@@ -60,12 +67,10 @@ pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
             }
         }
     }
-    let response = match get_response(msg) {
-        Ok(res) => res,
-        Err(err) => return Err(format!("Can not get response from resource: {:?}", err))
-    };
-    write_debug(format!("Outgoing message: {:?}", &response));
-    Ok(response)
+    match get_response(msg) {
+        Ok(res) => Ok(res),
+        Err(err) => Err(format!("Can not get response from resource: {:?}", err))
+    }
 }
 
 pub fn get_tor_failed_start_msg() -> ResMessage {
