@@ -1,4 +1,41 @@
-# Setup
+# Alby Companion app
+
+The Alby companion app allows Alby to connect to nodes that run behind Tor or are otherwise not easily accessible.
+
+# Build
+In the project folder, run:  
+```
+cargo build --release
+```
+after this you'll get an executable in `./target/release/alby`
+
+# Debug
+```
+cargo run
+```
+
+# Command-line options
+
+* `--log-file`, `--log_file`, `--l`    
+* `--tor-dir`, `--tor_dir`, `--t`
+
+## Run with option
+
+Executable:  
+
+```
+/some/folder/alby --log-file=/tmp/alby.log
+```
+
+Debug:  
+
+```
+cargo run -- --log-file=/tmp/alby.log
+```
+
+
+# Setup Notes
+
 ## MacOS
 You'll need [Homebrew](https://brew.sh/) and [installed Rust](https://rustup.rs/).
   
@@ -31,33 +68,4 @@ If there's no such folder:
 ```
 mkdir -p "~/Library/Application\ Support/Mozilla/NativeMessagingHosts/"
 ```
-# Build
-In the project folder, run:  
-```
-cargo build --release
-```
-after this you'll get an executable in `./target/release/alby`
 
-# Debug
-```
-cargo run
-```
-
-# Command-line options
-
-* `--log-file`, `--log_file`, `--l`    
-* `--tor-dir`, `--tor_dir`, `--t`
-
-## Run with option
-
-Executable:  
-
-```
-/some/folder/alby --log-file=/tmp/alby.log
-```
-
-Debug:  
-
-```
-cargo run -- --log-file=/tmp/alby.log
-```
