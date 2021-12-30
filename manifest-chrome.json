@@ -1,0 +1,7 @@
+{
+	"name": "alby",
+	"description": "Alby native messaging to connect to nodes behind Tor",
+	"path": "/target/release/alby",
+	"type": "stdio",
+	"allowed_origins": [ "chrome-extension://iokeahhehimjnekafflcihljlcjccdbe" ]
+}
