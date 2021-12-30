@@ -25,36 +25,45 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         Err(err) => return Err(ReqError::Message(format!("Can not parse URL: {}", err)))
     };
     let log_file = crate::get_logfile_path();
-    let client = match url.domain() {
-        Some(host) => match host.contains(".onion") {
-            true => {
-                if !crate::is_tor_started() {
-                    crate::tor::launch_tor();
-                }
-                if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &log_file) {
-                    return Ok(crate::messages::get_tor_failed_start_msg())
-                }
-                let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?.basic_auth(&get_tor_username(), &get_tor_password());
-                reqwest::blocking::Client::builder()
-                    .danger_accept_invalid_certs(true)
-                    .timeout(Some(Duration::from_secs(15)))
-                    .proxy(proxy)
-                    .build()?
-            },
-            false => {
-                let mut builder = reqwest::blocking::Client::builder()
-                    .timeout(Some(Duration::from_secs(15)));
-                if let Some(cert_str) = message.certificate {
-                    match reqwest::Certificate::from_pem(cert_str.as_bytes()) {
-                        Ok(cert) => builder = builder.add_root_certificate(cert),
-                        Err(e) => return Err(ReqError::Message(format!("Can not parse certificate: {:#?}", e)))
-                    }
-                }
-                builder.build()?
-            }
-        },
-        None => return Err(ReqError::Message("Can not parse domain".to_string())),
+    let is_clearnet = match url.domain() {
+        Some(host) => !host.contains(".onion"),
+        None => false,
     };
+    if !is_clearnet {
+        if !crate::is_tor_started() {
+            crate::tor::launch_tor();
+        }
+        if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &log_file) {
+            return Ok(crate::messages::get_tor_failed_start_msg())
+        }
+    }
+
+    let mut builder = reqwest::blocking::Client::builder().timeout(Some(Duration::from_secs(15)));
+    let mut cert_added = false;
+    if let Some(cert_str) = message.certificate {
+        if let Ok(cert_bytes) = base64::decode_config(&cert_str, base64::URL_SAFE) {
+            if let Ok(cert) = reqwest::Certificate::from_der(&cert_bytes) {
+                builder = builder.add_root_certificate(cert);
+                cert_added = true;
+            }
+        }
+        if !cert_added {
+            if let Ok(cert) = reqwest::Certificate::from_pem(cert_str.as_bytes()) {
+                builder = builder.add_root_certificate(cert);
+                cert_added = true;
+            }
+        }
+    }
+    if !is_clearnet && !cert_added {
+        builder = builder.danger_accept_invalid_certs(true);
+    }
+    if !is_clearnet {
+        let proxy = reqwest::Proxy::all(&format!("socks5h://127.0.0.1:{}", get_tor_port()))?.basic_auth(&get_tor_username(), &get_tor_password());
+        builder = builder.proxy(proxy);
+    }
+
+    let client = builder.build()?;
+
     let method = match message.method.as_str() {
         "GET" => reqwest::Method::GET,
         "POST" => reqwest::Method::POST,

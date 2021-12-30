@@ -6,6 +6,7 @@ version = 3
 name = "alby"
 version = "0.2.0"
 dependencies = [
+ "base64",
  "chrome_native_messaging",
  "chrono",
  "libtor",
