@@ -46,6 +46,11 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
                 builder = builder.add_root_certificate(cert);
                 cert_added = true;
             }
+        } else if let Ok(cert_bytes) = base64::decode(&cert_str) {
+            if let Ok(cert) = reqwest::Certificate::from_der(&cert_bytes) {
+                builder = builder.add_root_certificate(cert);
+                cert_added = true;
+            }
         }
         if !cert_added {
             if let Ok(cert) = reqwest::Certificate::from_pem(cert_str.as_bytes()) {
