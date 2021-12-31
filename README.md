@@ -57,15 +57,38 @@ After that restart your terminal.
 
 # Install companion app
 
-https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
+## Firefox
 
-* Edit `manifest-firefox.json`  
-* Copy `manifest-firefox.json` to `~/Library/Application Support/Mozilla/NativeMessagingHosts/<name>.json`
+1. build the companion app (`cargo build --release`)
+2. copy the `manifest-firefox.json` example to the Firefox NativeMessagingHosts folder of your system (see below)
+3. edit the path in that `alby.json` file and profile the full absolute path to your `alby` executable.
 
-    $ cp manifest-firefox.json "~/Library/Application\ Support/Mozilla/NativeMessagingHosts/alby.json"
+More information: [Mozilla docs](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging
+)
 
-If there's no such folder:  
-```
-mkdir -p "~/Library/Application\ Support/Mozilla/NativeMessagingHosts/"
-```
+#### Folder for the manifest file
+
+* **OSX:** `~/Library/Application Support/Mozilla/NativeMessagingHosts/alby.json`
+* **Linux:** `~/.mozilla/native-messaging-hosts/alby.json`
+* **Windows:** Create a Registry entry `HKEY_CURRENT_USER\SOFTWARE\Mozilla\NativeMessagingHosts\alby` with the default value as path to the manifest json file
+
+More details: [WebExtensions/Native_manifests](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests)
+
+
+## Chrome
+
+1. build the companion app (`cargo build --release`)
+2. copy the `manifest-chome.json` example to the Chrome NativeMessagingHosts folder of your system (see below)
+3. edit the path in that `alby.json` file and profile the full absolute path to your `alby` executable.
+4. make sure the extension ID is correct in that `alby.json` file
+
+More information: [Chome docs](https://developer.chrome.com/docs/apps/nativeMessaging/)
+
+#### Folder for the manifest file
+
+* **OSX:** `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/alby.json`
+* **Linux:** `~/.config/google-chrome/NativeMessagingHosts/alby.json`
+* **Windows:** [see here](https://developer.chrome.com/docs/apps/nativeMessaging/#native-messaging-host-location)
+
+More details: [WebExtensions/Native_manifests](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_manifests)
 
