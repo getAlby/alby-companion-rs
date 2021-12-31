@@ -55,7 +55,7 @@ echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"' >> ~/.zshrc
 ```
 After that restart your terminal.
 
-# Install companion app
+# Install the companion app for Alby
 
 ## Firefox
 
