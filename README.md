@@ -10,9 +10,9 @@ cargo build --release
 after this you'll get an executable in `./target/release/alby`
 
 # Debug
-```
-cargo run
-```
+
+When running as a native companion app check the log files (`/tmp/alby.log`) and if the process is running. 
+
 
 # Command-line options
 
