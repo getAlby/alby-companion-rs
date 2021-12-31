@@ -3,6 +3,7 @@
 use std::{fs, thread};
 use std::borrow::Borrow;
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
@@ -26,7 +27,7 @@ thread_local!(
     static TOR_PORT: u16 = get_random_port();
     static TOR_USERNAME: String = format!("u{}", get_random_string());
     static TOR_PASSWORD: String = get_random_string();
-    static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby-rs.log"));
+    static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby.log"));
     static TOR_DIR: RefCell<String> = RefCell::new(String::from("/tmp/tor-rust"));
     static TOR_STARTED: RefCell<bool> = RefCell::new(false);
     static TOR_READY: RefCell<bool> = RefCell::new(false);
@@ -49,7 +50,7 @@ fn main() {
 
     prepare_log_file();
     listen_for_sigterm();
-    write_debug("Waiting for messages".to_string());
+    write_debug("Waiting for messages");
     event_loop(messages::handler);
 }
 
@@ -68,11 +69,11 @@ pub fn get_pid_key() -> String {
     format!("process: {}", std::process::id())
 }
 
-fn write_debug(msg: String) {
+fn write_debug<T: Display>(msg: T) {
     write_debug_to(msg, &get_logfile_path());
 }
 
-fn write_debug_to(msg: String, log_file: &str) {
+fn write_debug_to<T: Display>(msg: T, log_file: &str) {
     let mut file = match OpenOptions::new().append(true).open(log_file) {
         Ok(f) => f,
         Err(_) => match OpenOptions::new().create(true).append(true).open(log_file) {
@@ -142,7 +143,7 @@ fn listen_for_sigterm() {
         Ok(mut signals) => {
             thread::spawn(move || {
                 for _ in signals.forever() {
-                    write_debug("SIGTERM received".to_string());
+                    write_debug("SIGTERM received");
                     exit(0, lock_file.clone());
                 }
             });

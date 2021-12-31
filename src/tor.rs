@@ -58,7 +58,7 @@ pub fn launch_tor() {
                     exit(1, lock_file);
                 }
             },
-            Err(_) => write_debug(String::from("Tor thread has panicked"))
+            Err(_) => write_debug("Tor thread has panicked")
         }
     });
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::time::Duration;
 
 use reqwest::header::HeaderMap;
@@ -20,20 +20,22 @@ impl From<reqwest::Error> for ReqError {
 }
 
 pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
+    write_debug(format!("message received: {:#?}", &message));
+    let id = message.id.clone();
     let mut url = match reqwest::Url::parse(&message.url) {
         Ok(u) => u,
-        Err(err) => return Err(ReqError::Message(format!("Can not parse URL: {}", err)))
+        Err(err) => return Err(ReqError::Message(format!("[{}]\t Can not parse URL: {}", &id, err)))
     };
-    let log_file = crate::get_logfile_path();
     let is_clearnet = match url.domain() {
         Some(host) => !host.contains(".onion"),
         None => false,
     };
     if !is_clearnet {
+        write_debug_about_msg("Sending this request using Tor", &id);
         if !crate::is_tor_started() {
             crate::tor::launch_tor();
         }
-        if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &log_file) {
+        if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &crate::get_logfile_path()) {
             return Ok(crate::messages::get_tor_failed_start_msg())
         }
     }
@@ -59,6 +61,9 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
             }
         }
     }
+    if cert_added {
+        write_debug_about_msg("Custom certificate has been set for this request", &id);
+    }
     if !is_clearnet && !cert_added {
         builder = builder.danger_accept_invalid_certs(true);
     }
@@ -81,7 +86,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         Some(map) => match HeaderMap::try_from(&map) {
             Ok(h) => h,
             Err(_) => {
-                write_debug("headers were not parsed".to_string());
+                write_debug_about_msg("headers were not parsed", &id);
                 HeaderMap::new()
             }
         },
@@ -102,7 +107,13 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         res_headers.insert(header_name.to_string(), header_value.to_str().unwrap_or("[can not be converted into string]").to_string());
     }
     let body = res.text()?;
-    write_debug(format!("server response status: {}, length: {}", &status, &body.len()));
+    let length = body.len();
+    if length > 512 {
+        write_debug_about_msg(format!("server response status: {}, length: {}", &status, &length), &id);
+    } else {
+        write_debug_about_msg(format!("server response status: {}, response: {:#?}", &status, &body), &id);
+    }
+
 
     Ok(ResMessage {
         id: message.id,
@@ -110,4 +121,8 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         body,
         headers: res_headers
     })
+}
+
+fn write_debug_about_msg<T: Display>(dbg: T, msg_id: &str) {
+    write_debug(format!("[{}]\t {}", msg_id, dbg));
 }

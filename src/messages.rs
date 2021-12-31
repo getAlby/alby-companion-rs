@@ -49,9 +49,22 @@ pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
         Ok(m) => m,
         Err(err) => return Err(format!("Can not parse message: \n{:#?}", err))
     };
-    let response = get_response_msg(msg)?;
-    write_debug(format!("Outgoing message: \n{:#?}", &response));
-    Ok(response)
+    let id = msg.id.clone();
+    match get_response_msg(msg) {
+        Ok(response) => {
+            write_debug(format!("[{}]\t Outgoing message: \n{:#?}", &id, &response));
+            Ok(response)
+        },
+        Err(err) => {
+            write_debug(format!("[{}]\t Request handling error: \n{}", &id, &err));
+            Ok(ResMessage {
+                id,
+                status: 500,
+                body: err,
+                headers: HashMap::from([("X-Alby-Internal".to_string(), "true".to_string())])
+            })
+        }
+    }
 }
 
 fn get_response_msg(msg: ReqMessage) -> Result<ResMessage, String>
