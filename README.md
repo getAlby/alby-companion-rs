@@ -55,6 +55,15 @@ echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"' >> ~/.zshrc
 ```
 After that restart your terminal.
 
+
+## Linux
+
+### Ubuntu Dependencies
+
+* build-essential, autoconf, libssl-dev
+* [rustup](https://rustup.rs/)
+
+
 # Install the companion app for Alby
 
 ## Firefox
