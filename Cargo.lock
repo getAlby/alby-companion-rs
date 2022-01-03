@@ -10,7 +10,6 @@ dependencies = [
  "chrome_native_messaging",
  "chrono",
  "libtor",
- "openssl",
  "rand",
  "reqwest",
  "serde",

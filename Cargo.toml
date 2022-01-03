@@ -7,7 +7,7 @@ homepage = "https://getalby.com/"
 repository = "https://github.com/getAlby/alby-companion-rs"
 
 [dependencies]
-libtor = "46.6.1"
+libtor = { version = "46.6.1", features = ["vendored-openssl"] }
 serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.73"
 chrome_native_messaging = "0.2.0"
@@ -16,7 +16,6 @@ chrono = "0.4"
 rand = "0.8.4"
 serial_test = "0.5.1"
 base64 = "0.13.0"
-openssl = { version = "0.10", features = ["vendored"] }
 
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.13"
