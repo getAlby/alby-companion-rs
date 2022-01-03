@@ -3,7 +3,7 @@ use std::thread;
 
 use libtor::{LogDestination, LogLevel, Tor, TorFlag};
 
-use crate::{exit, get_lock_file_path, get_log, get_logfile_path, get_tor_dir_path, get_tor_password, get_tor_port, get_tor_username, write_debug, write_debug_to};
+use crate::{exit, get_log, write_debug, write_debug_to};
 use crate::messages::{ResMessage, send_stdout_msg};
 
 pub fn launch_tor() {
@@ -11,12 +11,13 @@ pub fn launch_tor() {
         return;
     }
     crate::set_tor_is_started(true); // otherwise it will be possible to launch 2 starting processes
-    let port = get_tor_port();
-    let username = get_tor_username();
-    let password = get_tor_password();
-    let log_file = get_logfile_path();
-    let tor_dir = get_tor_dir_path();
-    let lock_file = get_lock_file_path();
+    let port = crate::get_tor_port();
+    let username = crate::get_tor_username();
+    let password = crate::get_tor_password();
+    let log_file = crate::get_logfile_path();
+    let tor_dir = crate::get_tor_dir_path();
+    let lock_file = crate::get_lock_file_path();
+    let debug_mode = crate::is_debug_mode();
     write_debug(format!("Starting Tor on port {}, user: {}, in folder {}. Log redirected to {}", port, username, &tor_dir, &log_file));
 
     thread::spawn(move || {
@@ -32,7 +33,7 @@ pub fn launch_tor() {
         match tor_thread.join() {
             Ok(r) => match r {
                 Ok(result) => {
-                    write_debug_to(format!("Tor thread was terminated: {}", result), &log_file);
+                    write_debug_to(format!("Tor thread was terminated: {}", result), &log_file, debug_mode);
                     send_stdout_msg(ResMessage {
                         id: "status".to_string(),
                         status: result as u16,
@@ -45,7 +46,7 @@ pub fn launch_tor() {
                     exit(result as i32, lock_file);
                 },
                 Err(err) => {
-                    write_debug_to(format!("Can not spawn Tor thread: {:#?}", err), &log_file);
+                    write_debug_to(format!("Can not spawn Tor thread: {:#?}", err), &log_file, debug_mode);
                     send_stdout_msg(ResMessage {
                         id: "status".to_string(),
                         status: 502,
@@ -58,7 +59,9 @@ pub fn launch_tor() {
                     exit(1, lock_file);
                 }
             },
-            Err(_) => write_debug("Tor thread has panicked")
+            Err(_) => {
+                write_debug("Tor thread has panicked");
+            }
         }
     });
 }

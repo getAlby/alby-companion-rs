@@ -27,10 +27,11 @@ thread_local!(
     static TOR_PORT: u16 = get_random_port();
     static TOR_USERNAME: String = format!("u{}", get_random_string());
     static TOR_PASSWORD: String = get_random_string();
-    static LOG_FILE: RefCell<String> = RefCell::new(String::from("/tmp/alby.log"));
-    static TOR_DIR: RefCell<String> = RefCell::new(String::from("/tmp/tor-rust"));
+    static LOG_FILE: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"alby.log"));
+    static TOR_DIR: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"tor-rust"));
     static TOR_STARTED: RefCell<bool> = RefCell::new(false);
     static TOR_READY: RefCell<bool> = RefCell::new(false);
+    static DEBUG_MODE: RefCell<bool> = RefCell::new(false);
 );
 
 fn main() {
@@ -40,6 +41,9 @@ fn main() {
     }
     if let Some(val) = opts.tor_dir {
         TOR_DIR.with(|v| { *v.borrow_mut() = val.to_string() });
+    }
+    if opts.debug_mode {
+        set_debug_mode(true);
     }
 
     let lock = create_lock_file();
@@ -55,13 +59,30 @@ fn main() {
 }
 
 
-pub fn prepare_log_file() {
+pub fn prepare_log_file() -> bool {
     let path = get_logfile_path();
+    let debug_mode = is_debug_mode();
     if Path::new(&path).exists() {
         match fs::remove_file(&path) {
-            Ok(_) => write_debug_to(get_pid_key(), &path),
-            Err(e) => eprintln!("can't prepare a log file {}: {:#?}", path, e)
+            Ok(_) => {
+                if debug_mode {
+                    write_debug_to(format!("Log file removed: {}", &path), &path, debug_mode);
+                }
+                write_debug_to(get_pid_key(), &path, debug_mode)
+            },
+            Err(e) => {
+                eprintln!("can't prepare a log file {}: {:#?}", path, e);
+                false
+            }
         }
+    } else if write_debug_to(get_pid_key(), &path, debug_mode) {
+        if debug_mode {
+            write_debug_to(format!("Log file created: {}", &path), &path, debug_mode);
+        }
+        true
+    } else {
+        eprintln!("can't prepare a log file {}!", path);
+        false
     }
 }
 
@@ -69,24 +90,31 @@ pub fn get_pid_key() -> String {
     format!("process: {}", std::process::id())
 }
 
-fn write_debug<T: Display>(msg: T) {
-    write_debug_to(msg, &get_logfile_path());
+#[allow(unused_results)]
+fn write_debug<T: Display>(msg: T) -> bool {
+    write_debug_to(msg, &get_logfile_path(), is_debug_mode())
 }
 
-fn write_debug_to<T: Display>(msg: T, log_file: &str) {
+#[allow(unused_results)]
+fn write_debug_to<T: Display>(msg: T, log_file: &str, debug_mode: bool) -> bool {
+    if debug_mode {
+        eprintln!("🚧 {}", &msg);
+    }
     let mut file = match OpenOptions::new().append(true).open(log_file) {
         Ok(f) => f,
         Err(_) => match OpenOptions::new().create(true).append(true).open(log_file) {
             Ok(f) => f,
             Err(e) => {
                 eprintln!("can't create a log file {}: {:#?}", log_file, e);
-                return;
+                return false;
             }
         }
     };
     if let Err(e) = writeln!(file, "{}\t {}", get_system_time(), msg) {
         eprintln!("Couldn't write to log file: {}", e);
+        return false;
     }
+    true
 }
 
 fn get_random_port() -> u16 {
@@ -148,7 +176,9 @@ fn listen_for_sigterm() {
                 }
             });
         },
-        Err(e) => write_debug(format!("Can not start signals listener: {:#?}", e))
+        Err(e) => {
+            write_debug(format!("Can not start signals listener: {:#?}", e));
+        },
     }
 }
 
@@ -215,4 +245,12 @@ pub fn is_tor_ready() -> bool {
 
 pub fn set_tor_is_ready(val: bool) {
     TOR_READY.with(|v| *v.borrow_mut() = val)
+}
+
+pub fn is_debug_mode() -> bool {
+    DEBUG_MODE.with(|v| *v.borrow())
+}
+
+pub fn set_debug_mode(val: bool) {
+    DEBUG_MODE.with(|v| *v.borrow_mut() = val)
 }

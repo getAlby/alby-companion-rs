@@ -2,6 +2,7 @@
 pub struct CliOptions {
     pub log_file: Option<String>,
     pub tor_dir: Option<String>,
+    pub debug_mode: bool,
 }
 
 pub fn get_args_from_cli() -> std::env::Args {
@@ -16,6 +17,9 @@ pub fn get_cli_options(args: impl Iterator<Item=String>) -> CliOptions {
         }
         if arg.starts_with("--tor_dir=") || arg.starts_with("--tor-dir=") || arg.starts_with("-t=") {
             opts.tor_dir = get_arg_val(&arg);
+        }
+        if arg.starts_with("--debug") || arg.starts_with("-debug") {
+            opts.debug_mode = true;
         }
     }
     opts
