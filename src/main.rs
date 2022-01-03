@@ -12,7 +12,9 @@ use std::time::SystemTime;
 use chrome_native_messaging::event_loop;
 use chrono::DateTime;
 use rand::{Rng, thread_rng};
+#[cfg(not(windows))]
 use signal_hook::consts::TERM_SIGNALS;
+#[cfg(not(windows))]
 use signal_hook::iterator::Signals;
 
 #[cfg(test)]
@@ -165,6 +167,7 @@ fn get_lock_file_path() -> String {
     format!("{}.process", get_logfile_path())
 }
 
+#[cfg(not(windows))]
 fn listen_for_sigterm() {
     let lock_file = get_lock_file_path();
     match Signals::new(TERM_SIGNALS) {
@@ -180,6 +183,10 @@ fn listen_for_sigterm() {
             write_debug(format!("Can not start signals listener: {:#?}", e));
         },
     }
+
+}
+#[cfg(windows)]
+fn listen_for_sigterm() {
 }
 
 struct LockFile {
