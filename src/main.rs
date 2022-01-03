@@ -170,11 +170,13 @@ fn get_lock_file_path() -> String {
 #[cfg(not(windows))]
 fn listen_for_sigterm() {
     let lock_file = get_lock_file_path();
+    let log_file = get_logfile_path();
+    let debug_mode = is_debug_mode();
     match Signals::new(TERM_SIGNALS) {
         Ok(mut signals) => {
             thread::spawn(move || {
                 for _ in signals.forever() {
-                    write_debug("SIGTERM received");
+                    write_debug_to("SIGTERM received", &log_file, debug_mode);
                     exit(0, lock_file.clone());
                 }
             });
@@ -183,8 +185,8 @@ fn listen_for_sigterm() {
             write_debug(format!("Can not start signals listener: {:#?}", e));
         },
     }
-
 }
+
 #[cfg(windows)]
 fn listen_for_sigterm() {
 }
