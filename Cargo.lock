@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "alby"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64",
  "chrome_native_messaging",
