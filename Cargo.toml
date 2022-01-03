@@ -16,6 +16,7 @@ chrono = "0.4"
 rand = "0.8.4"
 serial_test = "0.5.1"
 base64 = "0.13.0"
+openssl = { version = "0.10", features = ["vendored"] }
 
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.13"
