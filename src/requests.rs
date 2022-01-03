@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use reqwest::header::HeaderMap;
 
-use crate::{get_tor_password, get_tor_port, get_tor_username, write_debug};
+use crate::{get_tor_password, get_tor_port, get_tor_username, is_debug_mode, write_debug};
 use crate::messages::{ReqMessage, ResMessage};
 
 #[derive(Debug)]
@@ -20,7 +20,9 @@ impl From<reqwest::Error> for ReqError {
 }
 
 pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
-    write_debug(format!("message received: {:#?}", &message));
+    if is_debug_mode() {
+        write_debug(format!("message received: {:#?}", &message));
+    }
     let id = message.id.clone();
     let mut url = match reqwest::Url::parse(&message.url) {
         Ok(u) => u,
@@ -108,7 +110,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
     }
     let body = res.text()?;
     let length = body.len();
-    if length > 512 {
+    if length > 512 || is_debug_mode() {
         write_debug_about_msg(format!("server response status: {}, length: {}", &status, &length), &id);
     } else {
         write_debug_about_msg(format!("server response status: {}, response: {:#?}", &status, &body), &id);

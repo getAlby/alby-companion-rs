@@ -1,5 +1,6 @@
 use serial_test::serial;
 
+use crate::{get_log, get_logfile_path};
 use crate::messages::ReqMessage;
 
 #[test]
@@ -12,6 +13,41 @@ pub fn test_clearnet_request() {
 
     match crate::requests::get_response(msg) {
         Ok(r) => assert_eq!(r.id, String::from("10")),
+        Err(e) => panic!("e: {:#?}", e)
+    }
+}
+
+#[test]
+#[serial]
+pub fn test_logging_messages_only_in_debug_mode() {
+    crate::prepare_log_file();
+    
+    let mut msg: ReqMessage = Default::default();
+    msg.id = "14".to_string();
+    msg.url = String::from("https://github.com");
+    msg.body = Some(String::from("pa_zz_word"));
+
+    match crate::requests::get_response(msg) {
+        Ok(r) => {
+            assert_eq!(r.id, String::from("14"));
+            let log = get_log(&get_logfile_path());
+            assert!(!log.contains("pa_zz_word"));
+        },
+        Err(e) => panic!("e: {:#?}", e)
+    }
+
+    let mut msg: ReqMessage = Default::default();
+    msg.id = "15".to_string();
+    msg.url = String::from("https://github.com");
+    msg.body = Some(String::from("pa_zz_word"));
+    crate::set_debug_mode(true);
+
+    match crate::requests::get_response(msg) {
+        Ok(r) => {
+            assert_eq!(r.id, String::from("15"));
+            let log = get_log(&get_logfile_path());
+            assert!(log.contains("pa_zz_word"));
+        },
         Err(e) => panic!("e: {:#?}", e)
     }
 }

@@ -68,7 +68,7 @@ pub fn prepare_log_file() -> bool {
         match fs::remove_file(&path) {
             Ok(_) => {
                 if debug_mode {
-                    write_debug_to(format!("Log file removed: {}", &path), &path, debug_mode);
+                    write_debug_to(format!("Log file prepared: {}", &path), &path, debug_mode);
                 }
                 write_debug_to(get_pid_key(), &path, debug_mode)
             },

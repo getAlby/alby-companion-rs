@@ -4,9 +4,9 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as SerdeValue;
 
+use crate::{is_debug_mode, write_debug};
 use crate::requests::get_response;
 use crate::tor::wait_for_tor;
-use crate::write_debug;
 
 #[derive(Deserialize, Debug)]
 pub struct ReqMessage {
@@ -44,7 +44,9 @@ impl Default for ReqMessage {
 }
 
 pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
-    write_debug(format!("Incoming message: \n{:#?}", &v));
+    if is_debug_mode() {
+        write_debug(format!("Incoming message: \n{:#?}", &v));
+    }
     let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
         Ok(m) => m,
         Err(err) => return Err(format!("Can not parse message: \n{:#?}", err))
@@ -52,7 +54,9 @@ pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     let id = msg.id.clone();
     match get_response_msg(msg) {
         Ok(response) => {
-            write_debug(format!("[{}]\t Outgoing message: \n{:#?}", &id, &response));
+            if is_debug_mode() {
+                write_debug(format!("[{}]\t Outgoing message: \n{:#?}", &id, &response));
+            }
             Ok(response)
         },
         Err(err) => {
