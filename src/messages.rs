@@ -46,6 +46,8 @@ impl Default for ReqMessage {
 pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
     if is_debug_mode() {
         write_debug(format!("Incoming message: \n{:#?}", &v));
+    } else {
+        write_debug("Incoming message");
     }
     let msg: ReqMessage = match serde_json::from_value::<ReqMessage>(v) {
         Ok(m) => m,
@@ -56,6 +58,8 @@ pub fn handler(v: SerdeValue) -> Result<ResMessage, String> {
         Ok(response) => {
             if is_debug_mode() {
                 write_debug(format!("[{}]\t Outgoing message: \n{:#?}", &id, &response));
+            } else {
+                write_debug(format!("[{}]\t Outgoing message", &id));
             }
             Ok(response)
         },

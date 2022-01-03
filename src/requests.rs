@@ -22,6 +22,8 @@ impl From<reqwest::Error> for ReqError {
 pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
     if is_debug_mode() {
         write_debug(format!("message received: {:#?}", &message));
+    } else {
+        write_debug(format!("message received: {:#?}", &message.id));
     }
     let id = message.id.clone();
     let mut url = match reqwest::Url::parse(&message.url) {
