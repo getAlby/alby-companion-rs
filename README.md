@@ -11,13 +11,18 @@ after this you'll get an executable in `./target/release/alby`
 
 # Debug
 
-When running as a native companion app check the log files (`/tmp/alby.log`) and if the process is running. 
-
+Temporary directory might be generated in a folder with random (unique) name, so for debug you might want to run the app with "--debug" flag:  
+```
+cargo run -- --debug
+```
+In this mode you'll get the log file name.  
+When running as a native companion app check the log file and if the process is running.
 
 # Command-line options
 
-* `--log-file`, `--log_file`, `--l`    
-* `--tor-dir`, `--tor_dir`, `--t`
+* `--log-file`, `--log_file`, `--l` - string;     
+* `--tor-dir`, `--tor_dir`, `--t` - string;  
+* `--debug` - presence of this flag will turn on the debug mode.
 
 ## Run with option
 

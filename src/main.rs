@@ -28,7 +28,7 @@ thread_local!(
     static TOR_USERNAME: String = format!("u{}", get_random_string());
     static TOR_PASSWORD: String = get_random_string();
     static LOG_FILE: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"alby.log"));
-    static TOR_DIR: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"tor-rust"));
+    static TOR_DIR: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"alby-tor"));
     static TOR_STARTED: RefCell<bool> = RefCell::new(false);
     static TOR_READY: RefCell<bool> = RefCell::new(false);
     static DEBUG_MODE: RefCell<bool> = RefCell::new(false);
