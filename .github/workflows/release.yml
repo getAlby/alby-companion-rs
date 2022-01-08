@@ -26,4 +26,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
-          PRE_BUILD: pre.sh
+          PRE_BUILD: /home/runner/work/alby-companion-rs/alby-companion-rs/pre.sh
