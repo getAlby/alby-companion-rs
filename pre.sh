@@ -1,1 +1,1 @@
-apk add perl
+apk add perl automake
