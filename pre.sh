@@ -1,1 +1,1 @@
-apk add perl automake autoconf
+apk add perl automake autoconf libtool
