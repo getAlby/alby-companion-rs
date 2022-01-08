@@ -1,10 +1,31 @@
 # .github/workflows/release.yml
 
 on:
+  push:
+    branches:
+      - master
   release:
     types: [created]
 
 jobs:
+  build_windows:
+    name: build windows
+    runs-on: windows-latest
+    steps: 
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
+      - name: Archive chrome production zip file
+        uses: actions/upload-artifact@v2
+        with:
+          name: alby.exe
+          path: target/release/alby.exe
+
   release:
     name: release ${{ matrix.target }}
     runs-on: ubuntu-latest
