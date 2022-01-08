@@ -27,4 +27,4 @@ jobs:
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
           PRE_BUILD: pre.sh
-          RUSTFLAGS: -Clink-arg=-lssp_nonshared -Clink-arg=-lssp
+          RUSTFLAGS: "-Clink-arg=-lssp_nonshared -Clink-arg=-lssp -ladvapi32"
