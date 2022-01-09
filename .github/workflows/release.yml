@@ -20,6 +20,7 @@ jobs:
         with:
           command: build
           args: --release
+          use-cross: true
       - name: Archive chrome production zip file
         uses: actions/upload-artifact@v2
         with:
