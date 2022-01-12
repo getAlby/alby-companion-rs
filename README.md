@@ -93,8 +93,8 @@ More details: [WebExtensions/Native_manifests](https://developer.mozilla.org/en-
 
 1. build the companion app (`cargo build --release`)
 2. copy the `manifest-chome.json` example to the Chrome NativeMessagingHosts folder of your system (see below)
-3. edit the path in that `alby.json` file and profile the full absolute path to your `alby` executable.
-4. make sure the extension ID is correct in that `alby.json` file
+3. edit the path in that `alby.json` file and profile the full absolute path to your `alby` executable
+4. make sure the extension ID is correct in that `alby.json` file (it must end with a `/`)
 
 More information: [Chome docs](https://developer.chrome.com/docs/apps/nativeMessaging/)
 
