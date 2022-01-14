@@ -16,7 +16,11 @@ Temporary directory might be generated in a folder with random (unique) name, so
 cargo run -- --debug
 ```
 In this mode you'll get the log file name.  
+
 When running as a native companion app check the log file and if the process is running.
+```
+tail -f $TMPDIR/alby.log
+```
 
 # Command-line options
 
