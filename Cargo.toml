@@ -17,5 +17,8 @@ rand = "0.8.4"
 serial_test = "0.5.1"
 base64 = "0.13.0"
 
+[patch.crates-io]
+libtor-sys = { git = 'https://github.com/afilini/libtor-sys.git', branch = 'fix/libssp-0-dll-missing' }
+
 [target.'cfg(not(windows))'.dependencies]
 signal-hook = "0.3.13"
