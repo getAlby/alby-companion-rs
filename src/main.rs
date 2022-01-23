@@ -16,6 +16,7 @@ use rand::{Rng, thread_rng};
 use signal_hook::consts::TERM_SIGNALS;
 #[cfg(not(windows))]
 use signal_hook::iterator::Signals;
+use sysinfo::{PidExt, System, SystemExt};
 
 #[cfg(test)]
 mod test;
@@ -188,8 +189,7 @@ fn listen_for_sigterm() {
 }
 
 #[cfg(windows)]
-fn listen_for_sigterm() {
-}
+fn listen_for_sigterm() {}
 
 struct LockFile {
     path: String,
@@ -203,11 +203,45 @@ impl Drop for LockFile {
 
 fn create_lock_file() -> Option<LockFile> {
     let path = get_lock_file_path();
+    // Log file is not prepared at this moment, 
+    // so all debug info should be printed to std_err.
+    let debug_mode = is_debug_mode();
+
+    if Path::new(&path).exists() {
+        match fs::read_to_string(&path) {
+            Ok(pid_str) => match pid_str.trim().parse::<u32>() {
+                Err(err) => {
+                    if debug_mode {
+                        eprintln!("⚠️ Can't parse PID from the lock file [{}]: {:#?}", &path, err);
+                    }
+                    return None;
+                },
+                Ok(pid) => match is_pid_exists(pid) {
+                    true => return None,
+                    false => {
+                        if let Err(err) = fs::remove_file(&path) {
+                            if debug_mode {
+                                eprintln!("⚠️ Can't remove lock file [{}] of non-existing process [{}]: {:#?}", &path, pid, err);
+                            }
+                        }
+                    }
+                }
+            },
+            Err(err) => {
+                if debug_mode {
+                    eprintln!("⚠️ Can't read PID from the lock file [{}]: {:#?}", &path, err);
+                }
+                return None;
+            }
+        }
+    }
+
+
     match OpenOptions::new().write(true)
         .create_new(true)
         .open(&path) {
         Ok(mut file) => {
-            let _ = writeln!(file, "{}\t {}", get_system_time(), std::process::id());
+            let _ = write!(file, "{}", std::process::id());
             Some(LockFile { path })
         },
         Err(err) => {
@@ -215,6 +249,11 @@ fn create_lock_file() -> Option<LockFile> {
             None
         }
     }
+}
+
+fn is_pid_exists(pid: u32) -> bool {
+    let sys = System::new_all();
+    sys.process(sysinfo::Pid::from_u32(pid)).is_some()
 }
 
 fn get_system_time() -> String {

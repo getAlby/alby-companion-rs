@@ -16,6 +16,7 @@ chrono = "0.4"
 rand = "0.8.4"
 serial_test = "0.5.1"
 base64 = "0.13.0"
+sysinfo = "0.23.0"
 
 [patch.crates-io]
 libtor-sys = { git = 'https://github.com/afilini/libtor-sys.git', branch = 'fix/libssp-0-dll-missing' }
