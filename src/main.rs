@@ -210,11 +210,12 @@ fn create_lock_file() -> Option<LockFile> {
     if Path::new(&path).exists() {
         match fs::read_to_string(&path) {
             Ok(pid_str) => match pid_str.trim().parse::<u32>() {
-                Err(err) => {
-                    if debug_mode {
-                        eprintln!("⚠️ Can't parse PID from the lock file [{}]: {:#?}", &path, err);
+                Err(_) => {
+                    if let Err(err) = fs::remove_file(&path) {
+                        if debug_mode {
+                            eprintln!("⚠️ Can't remove non-parseable lock file [{}]: {:#?}", &path, err);
+                        }
                     }
-                    return None;
                 },
                 Ok(pid) => match is_pid_exists(pid) {
                     true => return None,

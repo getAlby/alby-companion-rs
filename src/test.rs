@@ -1,3 +1,5 @@
+use std::fs;
+
 use serial_test::serial;
 
 use crate::{get_log, get_logfile_path};
@@ -21,7 +23,7 @@ pub fn test_clearnet_request() {
 #[serial]
 pub fn test_logging_messages_only_in_debug_mode() {
     crate::prepare_log_file();
-    
+
     let mut msg: ReqMessage = Default::default();
     msg.id = "14".to_string();
     msg.url = String::from("https://github.com");
@@ -102,4 +104,28 @@ pub fn test_der_cert() {
         Ok(r) => assert_eq!(r.id, String::from("13")),
         Err(e) => panic!("e: {:#?}", e)
     }
+}
+
+#[test]
+#[serial]
+pub fn test_create_lock_file() {
+    use crate::{create_lock_file, get_lock_file_path};
+
+    let path = get_lock_file_path();
+    assert!(!path.is_empty());
+    let _ = fs::write(&path, "12345");
+    // scope for RAII
+    {
+        let lock1 = create_lock_file();
+        assert!(lock1.is_some());
+        let lock2 = create_lock_file();
+        assert!(lock2.is_none());
+    }
+    // lock1 and lock2 should call their "Drop" and remove their files
+    let lock3 = create_lock_file();
+    assert!(lock3.is_some());
+    // non-parseable PID is a reason to remove lock 
+    let _ = fs::write(&path, "---{!}---");
+    let lock4 = create_lock_file();
+    assert!(lock4.is_some());
 }
