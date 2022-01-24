@@ -44,7 +44,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         }
     }
 
-    let mut builder = reqwest::blocking::Client::builder().timeout(Some(Duration::from_secs(15)));
+    let mut builder = reqwest::blocking::Client::builder().timeout(Some(Duration::from_secs(75)));
     let mut cert_added = false;
     if let Some(cert_str) = message.certificate {
         if let Ok(cert_bytes) = base64::decode_config(&cert_str, base64::URL_SAFE) {
