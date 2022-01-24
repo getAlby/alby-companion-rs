@@ -83,7 +83,7 @@ fn get_response_msg(msg: ReqMessage) -> Result<ResMessage, String>
                 return Ok(get_tor_started_msg());
             }
             crate::tor::launch_tor();
-            return if wait_for_tor(15, &crate::get_logfile_path()) {
+            return if wait_for_tor(30, &crate::get_logfile_path()) {
                 Ok(get_tor_started_msg())
             } else {
                 Ok(get_tor_failed_start_msg())

@@ -39,7 +39,7 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
         if !crate::is_tor_started() {
             crate::tor::launch_tor();
         }
-        if !crate::is_tor_ready() && !crate::tor::wait_for_tor(15, &crate::get_logfile_path()) {
+        if !crate::is_tor_ready() && !crate::tor::wait_for_tor(30, &crate::get_logfile_path()) {
             return Ok(crate::messages::get_tor_failed_start_msg())
         }
     }
