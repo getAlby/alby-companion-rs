@@ -7,7 +7,7 @@ In the project folder, run:
 ```
 cargo build --release
 ```
-**OSX Universal:** 
+**OSX:** 
 ```
 cargo build --release --target x86_64-apple-darwin
 ```
