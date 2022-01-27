@@ -7,11 +7,15 @@ In the project folder, run:
 ```
 cargo build --release
 ```
+
 **OSX:** 
 ```
 cargo build --release --target x86_64-apple-darwin
+cargo build --release --target aarch64-apple-darwin
+lipo target/aarch64-apple-darwin/release/alby target/x86_64-apple-darwin/release/alby -create -output alby
 ```
-after this you'll get an executable in `./target/release/alby`
+with this you'll get an universal executable in `./alby`
+You can use the `./build-macos.sh` script to run the build and create a release zip file.
 
 # Debug
 
