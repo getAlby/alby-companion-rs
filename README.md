@@ -7,6 +7,10 @@ In the project folder, run:
 ```
 cargo build --release
 ```
+**OSX Universal:** 
+```
+cargo build --release --target x86_64-apple-darwin
+```
 after this you'll get an executable in `./target/release/alby`
 
 # Debug
