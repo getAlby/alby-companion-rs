@@ -1,6 +1,10 @@
-# Alby Companion app
+# Alby Companion Tor app
 
-The Alby companion app allows Alby to connect to nodes that run behind Tor or are otherwise not easily accessible.
+The Alby Tor app allows [Alby](https://getalby.com/) to connect to nodes that run behind Tor or are otherwise not easily accessible on the public clearnet internet.  
+It serves as native companion app for the [Alby lightning browser extension](https://getalby.com/). The browser extension uses the [browser's native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging) to talk to this native app.
+
+Typically the user does not manually install this app but uses an app package like for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
+
 
 # Build
 In the project folder, run:  
@@ -55,22 +59,10 @@ cargo run -- --log-file=/tmp/alby.log
 
 ## MacOS
 You'll need [Homebrew](https://brew.sh/) and [installed Rust](https://rustup.rs/).
-  
-1. OpenSSL
+
 ```
-brew install openssl@1.1 
+brew install openssl gcc libevent autoconf automake    
 ```
-then
-```
-echo 'export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"' >> ~/.zshrc
-echo 'export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib"' >> ~/.zshrc 
-echo 'export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"' >> ~/.zshrc
-```
-2. Compilation tools
-```
- brew install gcc libevent autoconf automake    
-```
-After that restart your terminal.
 
 
 ## Linux
