@@ -1,9 +1,9 @@
-# Alby Companion Tor app
+# Alby Companion app
 
-The Alby Tor app allows [Alby](https://getalby.com/) to connect to nodes that run behind Tor or are otherwise not easily accessible on the public clearnet internet.  
+The Alby companion app allows [Alby](https://getalby.com/) to connect to nodes that run behind Tor or are otherwise not easily accessible on the public clearnet internet.  
 It serves as native companion app for the [Alby lightning browser extension](https://getalby.com/). The browser extension uses the [browser's native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging) to talk to this native app.
 
-Typically the user does not manually install this app but uses an app package like for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
+**NOTE:** Typically the user does not manually install this app but uses an app package like for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
 
 
 # Build
@@ -55,7 +55,7 @@ cargo run -- --log-file=/tmp/alby.log
 ```
 
 
-# Setup Notes
+# Development Setup Notes
 
 ## MacOS
 You'll need [Homebrew](https://brew.sh/) and [installed Rust](https://rustup.rs/).
@@ -74,6 +74,9 @@ brew install openssl gcc libevent autoconf automake
 
 
 # Install the companion app for Alby
+
+**NOTE:** Typically the user does not manually install this app but uses an app package like for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
+
 
 ## Firefox
 
