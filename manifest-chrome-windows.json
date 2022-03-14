@@ -3,5 +3,5 @@
 	"description": "Alby native messaging to connect to nodes behind Tor",
 	"path": "alby.exe",
 	"type": "stdio",
-	"allowed_origins": [ "chrome-extension://edjnookdmfnmhpbflhjnbjefglppbjii/" ]
+	"allowed_origins": [ "chrome-extension://iokeahhehimjnekafflcihljlcjccdbe/" ]
 }
