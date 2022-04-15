@@ -112,10 +112,10 @@ pub fn get_response(message: ReqMessage) -> Result<ResMessage, ReqError> {
     }
     let body = res.text()?;
     let length = body.len();
-    if length > 512 || is_debug_mode() {
-        write_debug_about_msg(format!("server response status: {}, length: {}", &status, &length), &id);
+    if is_debug_mode() {
+        write_debug_about_msg(format!("server response status: {}, length: {} response: {:#?}", &status, &length, &body), &id);
     } else {
-        write_debug_about_msg(format!("server response status: {}, response: {:#?}", &status, &body), &id);
+        write_debug_about_msg(format!("server response status: {}", &status), &id);
     }
 
 
