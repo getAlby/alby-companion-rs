@@ -30,8 +30,8 @@ thread_local!(
     static TOR_PORT: u16 = get_random_port();
     static TOR_USERNAME: String = format!("u{}", get_random_string());
     static TOR_PASSWORD: String = get_random_string();
-    static LOG_FILE: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"alby.log"));
-    static TOR_DIR: RefCell<String> = RefCell::new(format!("{}{}",std::env::temp_dir().to_string_lossy(),"alby-tor"));
+    static LOG_FILE: RefCell<String> = RefCell::new(format!("{}", std::env::temp_dir().join("alby.log").to_string_lossy()));
+    static TOR_DIR: RefCell<String> = RefCell::new(format!("{}",std::env::temp_dir().join("alby-tor").to_string_lossy()));
     static TOR_STARTED: RefCell<bool> = RefCell::new(false);
     static TOR_READY: RefCell<bool> = RefCell::new(false);
     static DEBUG_MODE: RefCell<bool> = RefCell::new(false);
@@ -203,7 +203,7 @@ impl Drop for LockFile {
 
 fn create_lock_file() -> Option<LockFile> {
     let path = get_lock_file_path();
-    // Log file is not prepared at this moment, 
+    // Log file is not prepared at this moment,
     // so all debug info should be printed to std_err.
     let debug_mode = is_debug_mode();
 
