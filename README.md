@@ -3,7 +3,7 @@
 The Alby companion app allows [Alby](https://getalby.com/) to connect to nodes that run behind Tor or are otherwise not easily accessible on the public clearnet internet.  
 It serves as native companion app for the [Alby lightning browser extension](https://getalby.com/). The browser extension uses the [browser's native messaging](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Native_messaging) to talk to this native app.
 
-**NOTE:** Typically the user does not manually install this app but uses an app package like for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
+**NOTE:** Typically the user does not manually install this app. The download link and instructions will be provided directly from the extension when they connect their node. Alternatively the user can use an app package for [macOS](https://github.com/getAlby/alby-installer-macos) or [Windows](https://github.com/getAlby/alby-installer-windows)
 
 
 # Build
